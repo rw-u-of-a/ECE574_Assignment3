@@ -7,9 +7,8 @@
 //
 
 #include "Component.hpp"
-#include <vector>
 
-Component::Component(String line){
+Component::Component(string line){
     if(line.find("DEC")!=string::npos){
         
     }
@@ -46,11 +45,11 @@ Component::Component(String line){
     }
     else if(line.find("wire")!=string::npos){
         type = string("REG");
-        DataInputs.pushback(string("d"));
-        ControlInputs.pushback(string("Clk"));
-        ControlInputs.pushback(string("Rst"));
-        DataOutputs.pushback(string("q"));
-        Description = string("Register");
+        dataInputs.push_back(string("d"));
+        controlInputs.push_back(string("Clk"));
+        controlInputs.push_back(string("Rst"));
+        dataOutputs.push_back(string("q"));
+        description = string("Register");
         
     }
     else{

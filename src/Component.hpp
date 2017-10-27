@@ -10,21 +10,19 @@
 #define Component_hpp
 
 #include <stdio.h>
-
+#include <vector>
+#include <string>
+using namespace std;
 class Component{
-private:
-    String type;
-    std::vector<String> DataInputs;
-    std::vector<String> ControlInputs;
-    std::vector<String> DataOutputs;
-    std::vector<String> ControlOutputs;
-    String description;
-    int dataWidth;
-    
-    
 public:
-    Component(String line);
-    
+    Component(string line);
+    string type;
+    vector<string> dataInputs;
+    vector<string> controlInputs;
+    vector<string> dataOutputs;
+    vector<string> controlOutputs;
+    string description;
+    int dataWidth;
     
 };
 

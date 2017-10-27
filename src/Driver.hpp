@@ -8,17 +8,21 @@
 
 #ifndef Driver_hpp
 #define Driver_hpp
-
-#include <stdio.h>
 #include "vmodule.h"
+#include <stdio.h>
+#include <string>
+#include <iostream>
+#include <fstream>
 
 using namespace std;
 class Driver{
 public:
     Driver();
-    Run(string netlistFilename, string circuitFilename);
+    void Run(string netlistFilename, string circuitFilename);
     vmodule G;
-    map<string, map<int,double>> latencies;
+    map<string, map<int,double> > latencies;
+    string getType(string line);
+    double CalculateLatency();
     
 };
 

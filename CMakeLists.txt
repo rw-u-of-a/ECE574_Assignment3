@@ -11,3 +11,5 @@ PROJECT(	dpgen	CXX)
 
 # this file contains more CMakeLists.txt files
 ADD_SUBDIRECTORY(	src	)
+
+SET(CMAKE_CXX_FLAGS "-std=c++0x")

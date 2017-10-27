@@ -2,11 +2,10 @@
 //
 
 //#include "stdafx.h"
-#include <iostream>
-#include <fstream>
-#include <string>
 #include "stdlib.h"
-#include "Driver.h"
+#include "Driver.hpp"
+
+
 using namespace std;
 
 void put_operator(int , string , int, ofstream&);
@@ -25,12 +24,13 @@ int main(int argc, char ** argv)
     }
     temp = string("../src/circuits/")+string(argv[2]);
     char path[PATH_MAX];
+    char path2[PATH_MAX];
     realpath(temp.c_str(),path);//don't need absolute path on linux but osx is weird about it
     temp = string(path);
     realpath((string("../src/circuits/")+string(argv[1])).c_str(),path2);
     temp2 = string(path2);
-    Driver Baby();
-    Baby.run(temp2,temp);
+    Driver Baby;
+    Baby.Run(temp2,temp);
 //    ifstream infile(path);
 //    if(!infile.is_open()){
 //        cout <<"Can't open circuit file "<< circuitFilename <<endl;
@@ -46,7 +46,7 @@ int main(int argc, char ** argv)
 //	int sub_counter = 0;
 //
 //	ofstream outfile;
-//    char path2[PATH_MAX];
+
 //    
 //	outfile.open(path2);
 //    if(outfile.is_open()){

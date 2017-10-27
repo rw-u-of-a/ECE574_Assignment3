@@ -94,9 +94,9 @@ Driver::Driver(){
     latencies["DEC"][64] = 6.503;
 }
 
-Driver::run(String netlistFileName, String circuitFilename){
+void Driver::Run(string netlistFilename, string circuitFilename){
     ifstream infile(circuitFilename);
-    ofstream outfile(netlistFileName);
+    ofstream outfile(netlistFilename);
     string line;
     if(!infile.is_open()){
         cout <<"Can't open circuit file "<< circuitFilename <<endl;
@@ -107,12 +107,12 @@ Driver::run(String netlistFileName, String circuitFilename){
         return;
     }
     while(getline(infile,line)){
-        if(line.find("input") != string::npos){
+        if(line.find("input") !=string::npos){
             cout << "Handle input"<<endl;
             //do input stuff
             
         }
-        else if(line.find("output")!= string::npos){
+        else if(line.find("output")!=string::npos){
             cout << "Handle output" <<endl;
             //do output stuff
         }
@@ -136,7 +136,7 @@ double Driver::CalculateLatency(){
     return G.max_latency;
 }
 
-String Driver::getType(string type){
+string Driver::getType(string type){
     if(type == "Int8")return string("[7:0]");
     else if (type == "Int2")return string("[1:0]");
     else if(type == "Int16")return string("[15:0]");
