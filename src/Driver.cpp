@@ -102,7 +102,7 @@ void Driver::Run(string netlistFilename, string circuitFilename){
         cout <<"Can't open circuit file "<< circuitFilename <<endl;
         return;
     }
-    if(outfile.is_open()){
+    if(!outfile.is_open()){
         cout << "Could not open netlist file" <<netlistFilename<< endl;
         return;
     }

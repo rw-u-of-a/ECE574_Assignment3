@@ -23,6 +23,7 @@ int main(int argc, char ** argv)
         return 0;
     }
     temp = string("../src/circuits/")+string(argv[2]);
+	int PATH_MAX = 100;
     char path[PATH_MAX];
     char path2[PATH_MAX];
     realpath(temp.c_str(),path);//don't need absolute path on linux but osx is weird about it
