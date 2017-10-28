@@ -3,6 +3,8 @@
 # Date: 06 January 2016
 # Project Number: 
 
+set (CMAKE_CXX_STANDARD 11)
+
 # This file is an exception to the Code of Academic Integrity, and may be reused without
 # the need to request permission for future assignments **as long as all edits are made by
 # the submitting student**. Once a student modifies the file, they may not share it with
