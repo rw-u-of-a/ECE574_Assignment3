@@ -10,38 +10,45 @@
 
 Component::Component(string line){
     if(line.find("DEC")!=string::npos){
-        
+        //DEC
+		// Not sure if this has it's own operator
+		// or if we need to find 'x - 1'
     }
 
-    else if(line.find("ADD")!=string::npos){
-        
+    else if(line.find("+")!=string::npos){
+        //ADD
     }
-    else if(line.find("SUB")!=string::npos){
-        
+    else if(line.find("-")!=string::npos){
+        //SUB
     }
-    else if(line.find("MUL")!=string::npos) {
-        
+    else if(line.find("*")!=string::npos) {
+        //MULT
     }
-    else if(line.find("COMP")!=string::npos){
-        
+    else if(line.find(">")!=string::npos ||
+			line.find("<")!=string::npos ||
+			line.find("==")!=string::npos){
+        //COMP
     }
-    else if(line.find("MUX2x1")!=string::npos){
-    
+    else if(line.find("?")!=string::npos &&
+			line.find(":")!=string::npos){
+		//MUX2x1
     }
-    else if(line.find("SHR")!=string::npos){
-        
+    else if(line.find(">>")!=string::npos){
+        //SHR
     }
-    else if(line.find("SHL")!=string::npos){
-        
+    else if(line.find("<<")!=string::npos){
+        //SHL
     }
-    else if(line.find("DIV")!=string::npos){
-        
+    else if(line.find("/")!=string::npos){
+        //DIV
     }
-    else if(line.find("MOD")!=string::npos){
-        
+    else if(line.find("%")!=string::npos){
+        //MOD
     }
     else if(line.find("INC")!=string::npos){
-        
+        //INC
+		// Not sure if this has it's own operator
+		// or if we need to find 'x + 1'
     }
     else if(line.find("wire")!=string::npos){
         type = string("REG");

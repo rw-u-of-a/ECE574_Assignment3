@@ -126,7 +126,10 @@ void Driver::Run(string netlistFilename, string circuitFilename){
         }
 
     }
+	outfile.close();
+	infile.close();
     cout << "Critical path latency" <<CalculateLatency()<<endl;
+
 }
 
 double Driver::CalculateLatency(){
