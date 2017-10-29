@@ -8,6 +8,7 @@
 
 #include "Driver.hpp"
 #include "Component.hpp"
+#include "Operator.hpp"
 
 Driver::Driver(){
     latencies["REG"][1] = 2.616;
@@ -109,22 +110,25 @@ void Driver::Run(string netlistFilename, string circuitFilename){
     }
     while(getline(infile,line)){
         if(line.find("input") !=string::npos){
-            cout << "Handle input"<<endl;
+            cout << "Handle input Component"<<endl;
             //do input stuff
             
         }
         else if(line.find("output")!=string::npos){
-            cout << "Handle output" <<endl;
+            cout << "Handle output Component" <<endl;
             //do output stuff
         }
         else if(line.find("wire")!=string::npos&&line.find("wire",1)==string::npos){
             //do wire stuff
-            cout << "Handle wire" <<endl;
+            cout << "Handle wire Component" <<endl;
         }
         else {
             //handleComponent(line);
-            cout << "Handle component" <<endl;
-			Component temp_component(line);
+            cout << "Handle Operator" <<endl;
+			Operator temp_operator(line);
+			if (temp_operator.valid_operator) {
+				temp_operator.put_operator(temp_operator, outfile);
+			}
         }
 
     }

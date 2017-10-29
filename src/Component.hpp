@@ -23,6 +23,7 @@ class Component{
 public:
     Component(string line);
     string type;
+	string name;
     vector<string> dataInputs;
     vector<string> controlInputs;
     vector<string> dataOutputs;
