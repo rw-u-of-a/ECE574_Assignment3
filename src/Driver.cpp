@@ -7,6 +7,7 @@
 //
 
 #include "Driver.hpp"
+#include "Component.hpp"
 
 Driver::Driver(){
     latencies["REG"][1] = 2.616;
@@ -123,6 +124,7 @@ void Driver::Run(string netlistFilename, string circuitFilename){
         else {
             //handleComponent(line);
             cout << "Handle component" <<endl;
+			Component temp_component(line);
         }
 
     }

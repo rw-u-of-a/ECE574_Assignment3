@@ -12,6 +12,12 @@
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iterator>
+#include <typeinfo>
+
 using namespace std;
 class Component{
 public:
@@ -24,6 +30,7 @@ public:
     string description;
     int dataWidth;
     
+	vector<string> string_split(string line, char delim);
 };
 
 #endif /* Component_hpp */
