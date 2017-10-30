@@ -51,11 +51,6 @@ Operator::Operator(string line){
 		input_word.push_back("b");
 		output_word.push_back("prod");
     }
-    else if(line.find(">")!=string::npos ||
-			line.find("<")!=string::npos ||
-			line.find("==")!=string::npos){
-        //COMP
-    }
     else if(line.find("?")!=string::npos &&
 			line.find(":")!=string::npos){
 		//MUX2x1
@@ -68,10 +63,10 @@ Operator::Operator(string line){
 		output_word.push_back("d");
 		control_input_word.push_back("sel");
     }
-    else if(line.find(">>")!=string::npos){
+    else if(line.find_first_of(">")!=line.find_last_of(">")){
         //SHR
 		type = string("SHR");
-		op_pos = line.find(">>");
+		//op_pos = line.find(">>");
 		
 		
 		cout << "Found SHR" << endl;
@@ -79,21 +74,21 @@ Operator::Operator(string line){
 		valid_operator = true;
 		
 		input_word.push_back("a");
-		input_word.push_back("b");
-		output_word.push_back("prod");
+		control_input_word.push_back("sh_amt");
+		output_word.push_back("d");
     }
-    else if(line.find("<<")!=string::npos){
+    else if(line.find_first_of("<")!=line.find_last_of("<")){
         //SHL
 		type = string("SHL");
-		op_pos = line.find("<<");
+		//op_pos = line.find("<<");
 		
 		cout << "Found SHL" << endl;
 		
 		valid_operator = true;
 		
 		input_word.push_back("a");
-		input_word.push_back("b");
-		output_word.push_back("prod");
+		control_input_word.push_back("sh_amt");
+		output_word.push_back("d");
     }
     else if(line.find("/")!=string::npos){
         //DIV
@@ -116,6 +111,11 @@ Operator::Operator(string line){
 		input_word.push_back("a");
 		input_word.push_back("b");
 		output_word.push_back("rem");
+    }    
+	else if(line.find(">")!=string::npos ||
+			line.find("<")!=string::npos ||
+			line.find("==")!=string::npos){
+        //COMP
     }
     else if(line.find("INC")!=string::npos){
         //INC
@@ -132,6 +132,7 @@ Operator::Operator(string line){
 		bool all_alphanum = true;
 		bool found_equals = false;
 		bool found_questionmark = false;
+		bool found_shift = false;
 		
 		for (int i=0; i < all_elements.size(); i++) {
 			all_alphanum = true;
@@ -145,6 +146,10 @@ Operator::Operator(string line){
 					if (all_elements.at(i)[j] == '?') {
 						found_questionmark = true;
 					}
+					if (all_elements.at(i)[j] == '<' ||
+						all_elements.at(i)[j] == '>'){
+						found_shift = true;
+					}
 				}
 			}
 			
@@ -153,6 +158,11 @@ Operator::Operator(string line){
 				cout << "Found Data Output:  " << all_elements.at(i) << endl;
 			}
 			else if (all_alphanum && type == string("MUX2x1") && !found_questionmark){
+				op_controlInputs.push_back(all_elements.at(i));
+				cout << "Found Control Input:  " << all_elements.at(i) << endl;
+			}
+			else if (all_alphanum && (type == string("SHR") || type == string("SHL")) 
+				&& found_shift){
 				op_controlInputs.push_back(all_elements.at(i));
 				cout << "Found Control Input:  " << all_elements.at(i) << endl;
 			}
