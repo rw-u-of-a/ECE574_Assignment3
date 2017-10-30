@@ -26,8 +26,10 @@ public:
 	
 	vector<string> input_word;
 	vector<string> output_word;
+	vector<string> control_input_word;
+	vector<string> control_output_word;
 
-	bool valid_operator
+	bool valid_operator;
     
 	vector<string> string_split(string line, char delim);
 	
