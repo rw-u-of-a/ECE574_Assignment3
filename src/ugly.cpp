@@ -28,7 +28,8 @@ int main(int argc, char ** argv)
     bool is_signed;
     bool multiple;
     int dw;
-    regex emptyrgx ("^[[:space:]]*(//)*");
+    regex emptyrgx ("^[[:space:]]*$");
+    regex commentrgx ("^[[:space:]]*//");
     regex inputrgx ("[[:space:]]*input[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
     regex outputrgx ("[[:space:]]*output[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
     regex wirergx ("[[:space:]]*wire[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
@@ -69,13 +70,15 @@ int main(int argc, char ** argv)
     for(vector<string>::iterator itr = lines.begin(); itr != lines.end(); ++itr) {
         line = *itr;
 
-        if (regex_search(line, result, emptyrgx)) {}    // Is the line empty or a comment?
+        if (regex_search(line, result, emptyrgx)) {}        // Is the line empty?
 
-        else if (regex_search(line, result, inputrgx)) { // Does the line declare inputs?
-            is_signed = (result[1] != "U");         // Was there no U in front of Int?
-            dw = stoi(result[2]);                   // Datawidth
-            string vbles = result[3];               // List of variables
-            if (dw == 1)                            // Single bit
+        else if (regex_search(line, result, emptyrgx)) {}   // Is the line a comment?
+
+        else if (regex_search(line, result, inputrgx)) {    // Does the line declare inputs?
+            is_signed = (result[1] != "U");                 // Was there no U in front of Int?
+            dw = stoi(result[2]);                           // Datawidth
+            string vbles = result[3];                       // List of variables
+            if (dw == 1)                                    // Single bit
                 oline = "input";
             else
                 oline = "input [" + to_string(dw - 1) + ":0]";
@@ -188,7 +191,7 @@ int main(int argc, char ** argv)
             inc_idx++;
             out1 = result[1];
             in1 = result[2];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+            if(!G.wires[out1] || !G.wires[in1]){
                 cout << "Error:"<<"Wire"<<" does not exist"<< endl;
                 return 0;
             }
@@ -206,11 +209,11 @@ int main(int argc, char ** argv)
             dec_idx++;
             out1 = result[1];
             in1 = result[2];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+            if(!G.wires[out1] || !G.wires[in1]){
                 cout << "Error:"<<"Wire"<<" does not exist"<< endl;
                 return 0;
             }
-            dw = G.wires[out1]->datawidth;//dw = G.wires[in1]->datawidth;
+            dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["DEC"][dw]);
             G.wire_to_component(in1, name);
             G.wire_from_component(out1, name);
