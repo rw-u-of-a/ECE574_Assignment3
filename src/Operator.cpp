@@ -116,6 +116,22 @@ Operator::Operator(string line){
 			line.find("<")!=string::npos ||
 			line.find("==")!=string::npos){
         //COMP
+		type = string("COMP");
+		
+		valid_operator = true;
+		
+		input_word.push_back("a");
+		input_word.push_back("b");
+		
+		if (line.find(">")!=string::npos){
+			control_output_word.push_back("gt");
+		}
+		else if (line.find("<")!=string::npos){
+			control_output_word.push_back("lt");
+		}
+		else if (line.find("==")!=string::npos){
+			control_output_word.push_back("eq");
+		}
     }
     else if(line.find("INC")!=string::npos){
         //INC
@@ -153,7 +169,11 @@ Operator::Operator(string line){
 				}
 			}
 			
-			if (all_alphanum && !found_equals) {
+			if (all_alphanum && !found_equals && type == string("COMP")) {
+				op_controlOutputs.push_back(all_elements.at(i));
+				cout << "Found Contol Output:  " << all_elements.at(i) << endl;
+			}
+			else if (all_alphanum && !found_equals){
 				op_dataOutputs.push_back(all_elements.at(i));
 				cout << "Found Data Output:  " << all_elements.at(i) << endl;
 			}
@@ -169,6 +189,32 @@ Operator::Operator(string line){
 			else if (all_alphanum) {
 				op_dataInputs.push_back(all_elements.at(i));
 				cout << "Found Data Input:  " << all_elements.at(i) << endl;
+			}
+		}
+		
+		// special case for INC and DEC
+		if (type == string("ADD")){
+			for (int i=0; i < op_dataInputs.size(); i++){
+				if (op_dataInputs[i] == "1"){
+					type = string("INC");
+					
+					input_word.pop_back(); // delete the "b"
+					output_word.pop_back(); // delete the "sum"
+					output_word.push_back("d");
+					
+					op_dataInputs.pop_back(); // delete the "1"
+				}
+			}
+		}
+		if (type == string("SUB")){
+			if (op_dataInputs[op_dataInputs.size()-1] == "1"){ // "1" needs to be last input for DEC
+				type = string("DEC");
+				
+				input_word.pop_back(); // delete the "b"
+				output_word.pop_back(); // delete the "diff"
+				output_word.push_back("d");
+				
+				op_dataInputs.pop_back(); // delete the "1"
 			}
 		}
 	}
@@ -192,21 +238,29 @@ vector<string> Operator::string_split(string line, char delim){
 void Operator::put_operator(Operator& op, ofstream& outfile){
 	int temp_datawidth = 8;
 	cout << "outfile" << endl;
-	outfile << op.type << " #(.DATAWIDTH(" << temp_datawidth << ")) " << 
+	
+	stringstream ss;
+	
+	ss << op.type << " #(.DATAWIDTH(" << temp_datawidth << ")) " << 
 		op.type << "_" << 1 << "(";
 		
 	for (int i=0; i < op.input_word.size(); i++){
-		outfile << " ." << op.input_word[i] << "(" << op.op_dataInputs[i] << "), ";
+		ss << " ." << op.input_word[i] << "(" << op.op_dataInputs[i] << "), ";
 	}
 	for (int i=0; i < op.control_input_word.size(); i++){
-		outfile << " ." << op.control_input_word[i] << "(" << op.op_controlInputs[i] << "),";
+		ss << " ." << op.control_input_word[i] << "(" << op.op_controlInputs[i] << "),";
 	}
 	for (int i=0; i < op.output_word.size(); i++){
-		outfile << " ." << op.output_word[i] << "(" << op.op_dataOutputs[i] << "),";
+		ss << " ." << op.output_word[i] << "(" << op.op_dataOutputs[i] << "),";
 	}
 	for (int i=0; i < op.control_output_word.size(); i++){
-		outfile << " ." << op.control_output_word[i] << "(" << op.op_controlOutputs[i] << "),";
+		ss << " ." << op.control_output_word[i] << "(" << op.op_controlOutputs[i] << "),";
 	}
-		
+	
+	string temp_string = ss.str();
+	temp_string.pop_back();
+	
+	outfile << temp_string;
+	
 	outfile << ");\n";
 }
