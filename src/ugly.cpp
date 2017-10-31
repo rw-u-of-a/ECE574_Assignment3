@@ -13,12 +13,12 @@ using namespace std;
 int main(int argc, char ** argv)
 {
     string temp,temp2;
-//    if(argc != 3){
-//        cout <<"Incorrect number of arguments"<<endl;
-//        return 0;
-//    }
-    string netlistFile = "../src/circuits/"+string(argv[1]);//474a_circuit2.txt";
-    string verilogFile = "../src/circuits/"+string(argv[2]);//circuit2.v";
+    if(argc != 3){
+        cout <<"Incorrect number of arguments"<<endl;
+        return 0;
+    }
+    string netlistFile = "../../src/circuits/"+string(argv[1]);//474a_circuit2.txt";
+    string verilogFile = "../../src/circuits/"+string(argv[2]);//circuit2.v";
     vmodule G;
     string line, name, oline, in1, in2, in3, out1;
     vector<string> olines;
@@ -26,9 +26,11 @@ int main(int argc, char ** argv)
     bool is_signed;
     bool multiple;
     int dw;
+    regex emptyrgx ("^[[:space:]]*(//)*");
     regex inputrgx ("[[:space:]]*input[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
     regex outputrgx ("[[:space:]]*output[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
     regex wirergx ("[[:space:]]*wire[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
+    regex registerrgx ("[[:space:]]*register[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
     regex vblesrgx ("([[:alnum:]]+)[,]*[[:space:]]*([[:print:]]*)");
     regex regrgx ("[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*$");
     regex addrgx ("[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*\\+[[:space:]]*([[:alnum:]]+)");
@@ -65,7 +67,9 @@ int main(int argc, char ** argv)
     for(vector<string>::iterator itr = lines.begin(); itr != lines.end(); ++itr) {
         line = *itr;
 
-        if (regex_search(line, result, inputrgx)) { // Does the line declare inputs?
+        if (regex_search(line, result, emptyrgx)) {}    // Is the line empty or a comment?
+
+        else if (regex_search(line, result, inputrgx)) { // Does the line declare inputs?
             is_signed = (result[1] != "U");         // Was there no U in front of Int?
             dw = stoi(result[2]);                   // Datawidth
             string vbles = result[3];               // List of variables
@@ -136,6 +140,28 @@ int main(int argc, char ** argv)
             olines.push_back(oline);
         }
 
+        else if (regex_search(line, result, registerrgx)) { // Does the line declare registers?
+            is_signed = (result[1] != "U");         // Was there no U in front of Int?
+            dw = stoi(result[2]);                   // Datawidth
+            string vbles = result[3];               // List of variables
+            if (dw == 1)
+                oline = "wire";
+            else
+                oline = "wire [" + to_string(dw - 1) + ":0]";
+            multiple = false;
+            while (regex_search(vbles, result, vblesrgx)) { // While there are more wires to declare
+                if (multiple)
+                    oline = oline + ",";
+                multiple = true;
+                name = result[1];                           // name = next wire
+                oline = oline + " " + name;
+                G.add_wire(name, is_signed, dw);
+                vbles = result[2];
+            }
+            oline = oline + ";\n";
+            olines.push_back(oline);
+        }
+
         else if (regex_search(line, result, regrgx)) {      // Is the component a REG?
             name = "REG_" + to_string(reg_idx);
             reg_idx++;
@@ -156,7 +182,7 @@ int main(int argc, char ** argv)
             inc_idx++;
             out1 = result[1];
             in1 = result[2];
-            dw = G.wires[in1]->datawidth;
+            dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["INC"][dw]);
             G.wire_to_component(in1, name);
             G.wire_from_component(out1, name);
@@ -170,7 +196,7 @@ int main(int argc, char ** argv)
             dec_idx++;
             out1 = result[1];
             in1 = result[2];
-            dw = G.wires[in1]->datawidth;
+            dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["DEC"][dw]);
             G.wire_to_component(in1, name);
             G.wire_from_component(out1, name);
@@ -185,7 +211,7 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
-            dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
+            dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["ADD"][dw]);
             G.wire_to_component(in1, name);
@@ -206,7 +232,7 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
-            dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
+            dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["SUB"][dw]);
             G.wire_to_component(in1, name);
@@ -227,7 +253,7 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
-            dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
+            dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["MUL"][dw]);
             G.wire_to_component(in1, name);
@@ -312,7 +338,7 @@ int main(int argc, char ** argv)
             in1 = result[2];
             in2 = result[3];
             in3 = result[4];
-            dw = max(G.wires[in2]->datawidth, G.wires[in3]->datawidth);
+            dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["MUX2x1"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
@@ -329,7 +355,7 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
-            dw = G.wires[in1]->datawidth;
+            dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["SHR"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
@@ -345,7 +371,7 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
-            dw = G.wires[in1]->datawidth;
+            dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["SHL"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
@@ -361,7 +387,7 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
-            dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
+            dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["DIV"][dw]);
             G.wire_to_component(in1, name);
@@ -382,7 +408,7 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
-            dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
+            dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["MOD"][dw]);
             G.wire_to_component(in1, name);

@@ -125,10 +125,10 @@ void Driver::Run(string netlistFilename, string circuitFilename){
         else {
             //handleComponent(line);
             cout << "Handle Operator" <<endl;
-			Operator temp_operator(line);
-			if (temp_operator.valid_operator) {
-				temp_operator.put_operator(temp_operator, outfile);
-			}
+//			Operator temp_operator(line);
+//			if (temp_operator.valid_operator) {
+//				temp_operator.put_operator(temp_operator, outfile);
+//			}
         }
 
     }

@@ -6,7 +6,6 @@
 //
 //
 #include "vmodule.h"
-#include <stdio.h>
 
 map<string, map<int, double>> make_latencies(){
     return {{"REG",
