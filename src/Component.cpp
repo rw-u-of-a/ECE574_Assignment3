@@ -9,6 +9,9 @@
 #include "Component.hpp"
 
 Component::Component(string line){
+    if(1){
+        
+    }
     else if(line.find("wire")!=string::npos){
         type = string("REG");
         dataInputs.push_back(string("d"));

@@ -17,8 +17,8 @@ int main(int argc, char ** argv)
 //        cout <<"Incorrect number of arguments"<<endl;
 //        return 0;
 //    }
-    string netlistFile = "474a_circuit2.txt";
-    string verilogFile = "circuit2.v";
+    string netlistFile = "../src/circuits/"+string(argv[1]);//474a_circuit2.txt";
+    string verilogFile = "../src/circuits/"+string(argv[2]);//circuit2.v";
     vmodule G;
     string line, name, oline, in1, in2, in3, out1;
     vector<string> olines;
@@ -83,6 +83,8 @@ int main(int argc, char ** argv)
                 G.add_wire(name, is_signed, dw);    // Add the wire to the vmodule
                 G.wires[name]->is_completed = true; // These are inputs, so mark as completed
                 vbles = result[2];
+                olines[0] += ", ";
+                olines[0] += name;
             }
             oline = oline + ";\n";
             olines.push_back(oline);
@@ -105,6 +107,8 @@ int main(int argc, char ** argv)
                 oline = oline + " " + name;
                 G.add_wire(name, is_signed, dw);
                 vbles = result[2];
+                olines[0] += ", ";
+                olines[0] += name;
             }
             oline = oline + ";\n";
             olines.push_back(oline);
@@ -187,9 +191,9 @@ int main(int argc, char ** argv)
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
+//            if (is_signed)
+//                oline = "S";
+//            else
                 oline = "";
             oline += "ADD #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                      "(.a(" + in1 + "), .b(" + in2 + "), .sum(" + out1 + "));\n";
@@ -208,9 +212,9 @@ int main(int argc, char ** argv)
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
+//            if (is_signed)
+//                oline = "S";
+//            else
                 oline = "";
             oline = oline + "SUB #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .diff(" + out1 + "));\n";
@@ -229,9 +233,9 @@ int main(int argc, char ** argv)
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
+//            if (is_signed)
+//                oline = "S";
+//            else
                 oline = "";
             oline = oline + "MUL #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .prod(" + out1 + "));\n";
@@ -250,9 +254,9 @@ int main(int argc, char ** argv)
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
+//            if (is_signed)
+//                oline = "S";
+//            else
                 oline = "";
             oline += "COMP #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                      "(.a(" + in1 + "), .b(" + in2 + "), .gt(" + out1 + "));\n";
@@ -271,9 +275,9 @@ int main(int argc, char ** argv)
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
+//            if (is_signed)
+//                oline = "S";
+//            else
                 oline = "";
             oline = oline + "COMP #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .lt(" + out1 + "));\n";
@@ -292,9 +296,9 @@ int main(int argc, char ** argv)
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
+//            if (is_signed)
+//                oline = "S";
+//            else
                 oline = "";
             oline = oline + "COMP #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .eq(" + out1 + "));\n";
@@ -363,9 +367,9 @@ int main(int argc, char ** argv)
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
+//            if (is_signed)
+//                oline = "S";
+//            else
                 oline = "";
             oline = oline + "DIV #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .quot(" + out1 + "));\n";
@@ -384,9 +388,9 @@ int main(int argc, char ** argv)
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
+//            if (is_signed)
+//                oline = "S";
+//            else
                 oline = "";
             oline = oline + "MOD #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .rem(" + out1 + "));\n";
@@ -397,10 +401,10 @@ int main(int argc, char ** argv)
 
 
 
-    for(map<string, wire *>::iterator itr = G.wires.begin(); itr != G.wires.end(); ++itr){
-        olines[0] += ", ";
-        olines[0] += itr->first;
-    }
+//    for(map<string, wire *>::iterator itr = G.wires.begin(); itr != G.wires.end(); ++itr){//moved to the input, output checking sections
+//        olines[0] += ", ";
+//        olines[0] += itr->first;
+//    }
     olines[0] += ");\n";
 
     olines.push_back("endmodule\n");
