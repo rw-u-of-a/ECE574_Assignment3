@@ -33,4 +33,4 @@ file(	GLOB SRCS *.c *.h *.cpp *.hpp)
 # Define the target application executable (named crow) and the list of C source
 # and header files needed for the executable.
 
-add_executable(	dpgen ${SRCS})
+add_executable(	dpgen ${SRCS} ugly.cpp)

@@ -7,6 +7,8 @@
 
 using namespace std;
 
+map<string, map<int, double>> make_latencies();
+
 struct component {
     string name;
     double delay;
@@ -26,10 +28,14 @@ struct wire {
     string from;
     vector<string> tos;
     bool is_completed;
-    wire(string s, bool i) :
+    bool is_signed;
+    int datawidth;
+    wire(string s, bool i, int d) :
             name(s),
             latency(0),
-            is_completed(i)
+            is_completed(false),
+            is_signed(i),
+            datawidth(d)
     {}
 };
 
@@ -45,7 +51,7 @@ public:
     void add_component(const string&, double);
     void wire_to_component(const string&, const string&);
     void wire_from_component(const string&, const string&);
-    void add_wire(const string&, bool);
+    void add_wire(const string&, bool, int);
     void make_register(const string&);
     void propagate(const string&);
 };
