@@ -13,12 +13,14 @@ using namespace std;
 int main(int argc, char ** argv)
 {
     string temp,temp2;
-    if(argc != 3){
-        cout <<"Incorrect number of arguments"<<endl;
-        return 0;
-    }
-    string netlistFile = "../../src/circuits/"+string(argv[1]);//474a_circuit2.txt";
-    string verilogFile = "../../src/circuits/"+string(argv[2]);//circuit2.v";
+//    if(argc != 3){//uncomment for running in command line
+//        cout <<"Incorrect number of arguments"<<endl;
+//        return 0;
+//    }
+    string netlistFile = "../src/circuits/"+string(argv[1]);//use these 2 lines for command line, other 2 for debugger 1.
+    //string netlistFile = "/Users/Jake/Desktop/Dropbox/School/Arizona/Semester 7/ECE574/Assignment 2/tues/ECE574_Assignment2/src/circuits/error4.txt";
+    string verilogFile = "../src/circuits/"+string(argv[2]);//2.
+    //string verilogFile = "/Users/Jake/Desktop/Dropbox/School/Arizona/Semester 7/ECE574/Assignment 2/tues/ECE574_Assignment2/src/circuits/circuit1.v";
     vmodule G;
     string line, name, oline, in1, in2, in3, out1;
     vector<string> olines;
@@ -167,7 +169,11 @@ int main(int argc, char ** argv)
             reg_idx++;
             out1 = result[1];
             in1 = result[2];
-            dw = G.wires[in1]->datawidth;
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
+            dw = G.wires[out1]->datawidth;//dw = G.wires[in1]->datawidth;
             G.add_component(name, latencies["REG"][dw]);
             G.wire_to_component(in1, name);
             G.wire_from_component(out1, name);
@@ -182,6 +188,10 @@ int main(int argc, char ** argv)
             inc_idx++;
             out1 = result[1];
             in1 = result[2];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["INC"][dw]);
             G.wire_to_component(in1, name);
@@ -196,7 +206,11 @@ int main(int argc, char ** argv)
             dec_idx++;
             out1 = result[1];
             in1 = result[2];
-            dw = G.wires[out1]->datawidth;
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
+            dw = G.wires[out1]->datawidth;//dw = G.wires[in1]->datawidth;
             G.add_component(name, latencies["DEC"][dw]);
             G.wire_to_component(in1, name);
             G.wire_from_component(out1, name);
@@ -211,16 +225,17 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["ADD"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-//            if (is_signed)
-//                oline = "S";
-//            else
-                oline = "";
+            oline = "";
             oline += "ADD #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                      "(.a(" + in1 + "), .b(" + in2 + "), .sum(" + out1 + "));\n";
             olines.push_back(oline);
@@ -232,16 +247,17 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["SUB"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-//            if (is_signed)
-//                oline = "S";
-//            else
-                oline = "";
+            oline = "";
             oline = oline + "SUB #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .diff(" + out1 + "));\n";
             olines.push_back(oline);
@@ -253,16 +269,17 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["MUL"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-//            if (is_signed)
-//                oline = "S";
-//            else
-                oline = "";
+            oline = "";
             oline = oline + "MUL #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .prod(" + out1 + "));\n";
             olines.push_back(oline);
@@ -274,16 +291,17 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["COMP"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-//            if (is_signed)
-//                oline = "S";
-//            else
-                oline = "";
+            oline = "";
             oline += "COMP #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                      "(.a(" + in1 + "), .b(" + in2 + "), .gt(" + out1 + "));\n";
             olines.push_back(oline);
@@ -295,16 +313,17 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["COMP"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-//            if (is_signed)
-//                oline = "S";
-//            else
-                oline = "";
+            oline = "";
             oline = oline + "COMP #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .lt(" + out1 + "));\n";
             olines.push_back(oline);
@@ -316,16 +335,17 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["COMP"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-//            if (is_signed)
-//                oline = "S";
-//            else
-                oline = "";
+            oline = "";
             oline = oline + "COMP #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .eq(" + out1 + "));\n";
             olines.push_back(oline);
@@ -338,6 +358,10 @@ int main(int argc, char ** argv)
             in1 = result[2];
             in2 = result[3];
             in3 = result[4];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2] ||!G.wires[in3]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["MUX2x1"][dw]);
             G.wire_to_component(in1, name);
@@ -355,6 +379,10 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["SHR"][dw]);
             G.wire_to_component(in1, name);
@@ -371,6 +399,10 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = G.wires[out1]->datawidth;
             G.add_component(name, latencies["SHL"][dw]);
             G.wire_to_component(in1, name);
@@ -387,16 +419,17 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["DIV"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-//            if (is_signed)
-//                oline = "S";
-//            else
-                oline = "";
+            oline = "";
             oline = oline + "DIV #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .quot(" + out1 + "));\n";
             olines.push_back(oline);
@@ -408,29 +441,31 @@ int main(int argc, char ** argv)
             out1 = result[1];
             in1 = result[2];
             in2 = result[3];
+            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
+                return 0;
+            }
             dw = G.wires[out1]->datawidth;
             is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
             G.add_component(name, latencies["MOD"][dw]);
             G.wire_to_component(in1, name);
             G.wire_to_component(in2, name);
             G.wire_from_component(out1, name);
-//            if (is_signed)
-//                oline = "S";
-//            else
-                oline = "";
+            oline = "";
             oline = oline + "MOD #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
                     "(.a(" + in1 + "), .b(" + in2 + "), .rem(" + out1 + "));\n";
             olines.push_back(oline);
         }
+        else{
+            if(!(line == "" || line == "\n")){
+                cout << "Error with line:"<<line<<endl;
+            return 0;
+            }
+            
+        }
 
     }
 
-
-
-//    for(map<string, wire *>::iterator itr = G.wires.begin(); itr != G.wires.end(); ++itr){//moved to the input, output checking sections
-//        olines[0] += ", ";
-//        olines[0] += itr->first;
-//    }
     olines[0] += ");\n";
 
     olines.push_back("endmodule\n");
