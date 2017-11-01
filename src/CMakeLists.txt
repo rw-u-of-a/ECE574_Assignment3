@@ -34,3 +34,5 @@ file(	GLOB SRCS *.c *.h *.cpp *.hpp)
 # and header files needed for the executable.
 
 add_executable(	dpgen ${SRCS} ugly.cpp)
+
+SET(CMAKE_CXX_FLAGS "-lboost_regex")
