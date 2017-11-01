@@ -13,4 +13,4 @@ Richard Wilson - richardwilson ECE574
 Jake Given - debugging, preliminary design
 Joseph Loubert - lead programmer
 Giresse Tchegho - Moral support
-Richard Wilson - Git manager, Attempted execution of original plan
+Richard Wilson - Git manager, Attempted execution of original plan,debugging
