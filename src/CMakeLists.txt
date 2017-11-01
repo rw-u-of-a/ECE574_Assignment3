@@ -33,6 +33,6 @@ file(	GLOB SRCS *.c *.h *.cpp *.hpp)
 # Define the target application executable (named crow) and the list of C source
 # and header files needed for the executable.
 
-add_executable(	dpgen ${SRCS} ugly.cpp)
+add_executable(	dpgen ${SRCS} )
 
 SET(CMAKE_CXX_FLAGS "-lboost_regex")
