@@ -5,54 +5,43 @@
 #include <iostream>
 #include <fstream>
 #include <map>
-#include <boost/regex.hpp>
-#include "vmodule.h"
+#include <regex>
+#include "hlsm.h"
 
 using namespace std;
-using namespace boost;
+//using namespace boost;
 
-int main(int argc, char ** argv)
-{
-    string temp,temp2,temp3;
-    if(argc != 3){//uncomment for running in command line
-        cout <<"Incorrect number of arguments"<<endl;
+int main(int argc, char ** argv) {
+    string temp, temp2, temp3;
+    if (argc != 3) {//uncomment for running in command line
+        cout << "Incorrect number of arguments" << endl;
         return 0;
     }
     string netlistFile = string(argv[1]);
     string verilogFile = string(argv[2]);
-    vmodule G;
-    string line, name, oline, in1, in2, in3, out1;
+    string line;
+
+    hlsm G;
+    G.num_states = 1;
+    string name, oline;
+    string in1, in2, in3, out, oper;
     vector<string> olines;
     vector<string> lines;
     bool is_signed;
     bool multiple;
     int dw;
-    regex emptyrgx ("^[[:space:]]*$");
-    regex commentrgx ("^[[:space:]]*//");
-    regex inputrgx ("^[[:space:]]*input[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
-    regex outputrgx ("^[[:space:]]*output[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
-    regex wirergx ("^[[:space:]]*wire[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
-    regex registerrgx ("^[[:space:]]*register[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+([[:print:]]+)");
-    regex vblesrgx ("^([[:alnum:]]+)[,]*[[:space:]]*([[:print:]]*)");
-    regex regrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*$");
-    regex addrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*\\+[[:space:]]*([[:alnum:]]+)");
-    regex subrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*-[[:space:]]*([[:alnum:]]+)");
-    regex mulrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*\\*[[:space:]]*([[:alnum:]]+)");
-    regex ltrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*<[[:space:]]*([[:alnum:]]+)");
-    regex gtrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*>[[:space:]]*([[:alnum:]]+)");
-    regex eqrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*==[[:space:]]*([[:alnum:]]+)");
-    regex muxrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*\\?[[:space:]]*([[:alnum:]]+)[[:space:]]*:[[:space:]]*([[:alnum:]]+)");
-    regex shrrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*>>[[:space:]]*([[:alnum:]]+)");
-    regex shlrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*<<[[:space:]]*([[:alnum:]]+)");
-    regex divrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*/[[:space:]]*([[:alnum:]]+)");
-    regex modrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*%[[:space:]]*([[:alnum:]]+)");
-    regex incrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*\\+[[:space:]]*1[[:space:]]*$");
-    regex decrgx ("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*-[[:space:]]*1[[:space:]]*$");
-    int reg_idx = 1, add_idx = 1, sub_idx = 1, mul_idx = 1, comp_idx = 1, mux_idx = 1, shr_idx = 1, shl_idx = 1,
-            div_idx = 1, mod_idx = 1, inc_idx = 1, dec_idx = 1;
+    regex emptyrgx("^[[:space:]]*(?:$|//)");
+    regex declarergx("^[[:space:]]*(input|output|variable)[[:space:]]+(U)?Int([[:digit:]]+)[[:space:]]+"
+                             "([[:print:]]+)(?:$|//)");
+    regex vblesrgx("^([[:alnum:]]+)[,]?[[:space:]]*([[:print:]]*)");
+    regex comrgx("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*"
+                         "(\\+|-|\\*|<|>|==|>>|<<|/|%)"
+                         "[[:space:]]*([[:alnum:]]+)[[:space:]]*(?:$|//)");
+    regex muxrgx("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*"
+                         "\\?[[:space:]]*([[:alnum:]]+)[[:space:]]*:[[:space:]]*([[:alnum:]]+)[[:space:]]*(?:$|//)");
     smatch result;
-    map<string, map<int, double>> latencies;
-    latencies = make_latencies();
+    int id = 1;     // id 0 is inop, id -1 is onop
+    int state = 1;  // state 0 is wait
 
     ifstream infile(netlistFile);
     if(infile.is_open()){
@@ -61,457 +50,214 @@ int main(int argc, char ** argv)
         }
         infile.close();
     }
-	else{
-		cout << "File could not be opened"<<endl;
-		return 0;
-	}
+    else{
+        cout << "File could not be opened"<<endl;
+        return 0;
+    }
     temp3 = argv[2];
     size_t pos = temp3.find(".v");
     string netlistname = temp3.substr(0,pos);
 
-    olines.push_back("module " + netlistname + "(Clk, Rst");
+    olines.push_back("module " + netlistname + "(Clk, Rst, Start, Done");
+    olines.push_back("  input Clk, Rst, Start;\n");
+    olines.push_back("  output reg Done;\n");
+
+    G.add_component(0, 0, "");  // inop
+    G.inop(0);                  // inop
+
+    G.add_state(state);
+    state++;
 
     for(vector<string>::iterator itr = lines.begin(); itr != lines.end(); ++itr) {
         line = *itr;
 
         if (regex_search(line, result, emptyrgx)) {}        // Is the line empty?
 
-        else if (regex_search(line, result, emptyrgx)) {}   // Is the line a comment?
+        else if (regex_search(line, result, declarergx)) {  // Does the line declare variables?
+            string dectype = result[1];
+            is_signed = (result[2] != "U");                 // Was there no U in front of Int?
+            dw = stoi(result[3]);                           // Datawidth
+            string vbles = result[4];                       // List of variables
 
-        else if (regex_search(line, result, inputrgx)) {    // Does the line declare inputs?
-            is_signed = (result[1] != "U");                 // Was there no U in front of Int?
-            dw = stoi(result[2]);                           // Datawidth
-            string vbles = result[3];                       // List of variables
-            if (dw == 1)                                    // Single bit
-                oline = "input";
-            else
-                oline = "input [" + to_string(dw - 1) + ":0]";
-            multiple = false;
-            while (regex_search(vbles, result, vblesrgx)) {
-                if (multiple)
-                    oline = oline + ",";
-                multiple = true;
-                name = result[1];
-                oline = oline + " " + name;
-                G.add_wire(name, is_signed, dw);    // Add the wire to the vmodule
-                G.wires[name]->is_completed = true; // These are inputs, so mark as completed
-                vbles = result[2];
-                olines[0] += ", ";
-                olines[0] += name;
+            if (dectype == "input") {
+                if (dw == 1)                                // Single bit
+                    oline = "  input";
+                else
+                    oline = "  input [" + to_string(dw - 1) + ":0]";
+                multiple = false;                               // Are multiple variables declared in this line?
+                while (regex_search(vbles, result, vblesrgx)) { // While there are more inputs to declare
+                    if (multiple)
+                        oline = oline + ",";
+                    multiple = true;
+                    name = result[1];
+                    oline = oline + " " + name;
+                    G.add_wire(name, is_signed, dw);    // Add the wire to the HLSM
+                    G.wires[name]->from = 0;            // These wires come from inop
+                    vbles = result[2];
+                    olines[0] += ", ";
+                    olines[0] += name;
+                }
+            }
+
+            else if (dectype == "output") {
+                if (dw == 1)
+                    oline = "  output";
+                else
+                    oline = "  output [" + to_string(dw - 1) + ":0]";
+                multiple = false;
+                while (regex_search(vbles, result, vblesrgx)) { // While there are more outputs to declare
+                    if (multiple)
+                        oline = oline + ",";
+                    multiple = true;
+                    name = result[1];
+                    oline = oline + " " + name;
+                    G.add_wire(name, is_signed, dw);    // Add the wire to the HLSM
+                    G.wires[name]->to = {-1};           // These wires go to onop
+                    vbles = result[2];
+                    olines[0] += ", ";
+                    olines[0] += name;
+                }
+            }
+
+            else if (dectype == "variable") {
+                if (dw == 1)
+                    oline = "  reg";
+                else
+                    oline = "  reg [" + to_string(dw - 1) + ":0]";
+                multiple = false;
+                while (regex_search(vbles, result, vblesrgx)) { // While there are more regs to declare
+                    if (multiple)
+                        oline = oline + ",";
+                    multiple = true;
+                    name = result[1];                           // name = next reg
+                    oline = oline + " " + name;
+                    G.add_wire(name, is_signed, dw);
+                    vbles = result[2];
+                }
             }
             oline = oline + ";\n";
             olines.push_back(oline);
         }
 
-        else if (regex_search(line, result, outputrgx)) {// Does the line declare outputs?
-            is_signed = (result[1] != "U");         // Was there no U in front of Int?
-            dw = stoi(result[2]);                   // Datawidth
-            string vbles = result[3];               // List of variables
-            if (dw == 1)
-                oline = "output";
-            else
-                oline = "output [" + to_string(dw - 1) + ":0]";
-            multiple = false;
-            while (regex_search(vbles, result, vblesrgx)) { // While there are more wires to declare
-                if (multiple)
-                    oline = oline + ",";
-                multiple = true;
-                name = result[1];                           // name = next wire
-                oline = oline + " " + name;
-                G.add_wire(name, is_signed, dw);
-                vbles = result[2];
-                olines[0] += ", ";
-                olines[0] += name;
-            }
-            oline = oline + ";\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, wirergx)) {     // Does the line declare wires?
-            is_signed = (result[1] != "U");         // Was there no U in front of Int?
-            dw = stoi(result[2]);                   // Datawidth
-            string vbles = result[3];               // List of variables
-            if (dw == 1)
-                oline = "wire";
-            else
-                oline = "wire [" + to_string(dw - 1) + ":0]";
-            multiple = false;
-            while (regex_search(vbles, result, vblesrgx)) { // While there are more wires to declare
-                if (multiple)
-                    oline = oline + ",";
-                multiple = true;
-                name = result[1];                           // name = next wire
-                oline = oline + " " + name;
-                G.add_wire(name, is_signed, dw);
-                vbles = result[2];
-            }
-            oline = oline + ";\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, registerrgx)) { // Does the line declare registers?
-            is_signed = (result[1] != "U");         // Was there no U in front of Int?
-            dw = stoi(result[2]);                   // Datawidth
-            string vbles = result[3];               // List of variables
-            if (dw == 1)
-                oline = "wire";
-            else
-                oline = "wire [" + to_string(dw - 1) + ":0]";
-            multiple = false;
-            while (regex_search(vbles, result, vblesrgx)) { // While there are more wires to declare
-                if (multiple)
-                    oline = oline + ",";
-                multiple = true;
-                name = result[1];                           // name = next wire
-                oline = oline + " " + name;
-                G.add_wire(name, is_signed, dw);
-                vbles = result[2];
-            }
-            oline = oline + ";\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, regrgx)) {      // Is the component a REG?
-            name = "REG_" + to_string(reg_idx);
-            reg_idx++;
-            out1 = result[1];
+        else if (regex_search(line, result, comrgx)) {
+            out = result[1];
             in1 = result[2];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = G.wires[out1]->datawidth;//dw = G.wires[in1]->datawidth;
-            G.add_component(name, latencies["REG"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_from_component(out1, name);
-            G.make_register(name);
-            oline = "REG #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.d(" + in1 + "), .q(" + out1 + "), .Clk(Clk), .Rst(Rst));\n";
-            olines.push_back(oline);
-        }
+            oper = result[3];
+            in2 = result[4];
 
-        else if (regex_search(line, result, incrgx)) {      // Is the component an INC?
-            name = "INC_" + to_string(inc_idx);
-            inc_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            if(!G.wires[out1] || !G.wires[in1]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
+            if(!G.wires[out] || !G.wires[in1] || !G.wires[in2]){
+                cout << "Undeclared variable in line:"<<line<<endl;
+                return -1;
             }
-            dw = G.wires[out1]->datawidth;
-            G.add_component(name, latencies["INC"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_from_component(out1, name);
-            oline = "INC #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .d(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
+            G.add_component(id, state, out + " <= " + in1 + " " + oper + " " + in2 +";\n");
+            G.wire_to_component(in1, id);
+            G.wire_to_component(in2, id);
+            G.wire_from_component(out, id);
 
-        else if (regex_search(line, result, decrgx)) {      // Is the component a DEC?
-            name = "DEC_" + to_string(dec_idx);
-            dec_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            if(!G.wires[out1] || !G.wires[in1]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = G.wires[out1]->datawidth;
-            G.add_component(name, latencies["DEC"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_from_component(out1, name);
-            oline = "DEC #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .d(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, addrgx)) {      // Is the component an ADD?
-            name = "ADD_" + to_string(add_idx);
-            add_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = G.wires[out1]->datawidth;
-            is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
-            G.add_component(name, latencies["ADD"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
+            if (oper == "*")
+                G.components[id]->num_cyc = 2;
+            else if (oper == "/")
+                G.components[id]->num_cyc = 3;
+            else if (oper == "%")
+                G.components[id]->num_cyc = 3;
             else
-                oline = "";
-            oline += "ADD #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                     "(.a(" + in1 + "), .b(" + in2 + "), .sum(" + out1 + "));\n";
-            olines.push_back(oline);
+                G.components[id]->num_cyc = 1;
+
+            id++;
         }
 
-        else if (regex_search(line, result, subrgx)) {      // Is the component a SUB?
-            name = "SUB_" + to_string(sub_idx);
-            sub_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = G.wires[out1]->datawidth;
-            is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
-            G.add_component(name, latencies["SUB"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
-                oline = "";
-            oline = oline + "SUB #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .b(" + in2 + "), .diff(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, mulrgx)) {      // Is the component a MUL?
-            name = "MUL_" + to_string(mul_idx);
-            mul_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = G.wires[out1]->datawidth;
-            is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
-            G.add_component(name, latencies["MUL"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
-                oline = "";
-            oline = oline + "MUL #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .b(" + in2 + "), .prod(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, gtrgx)) {      // Is the component a '>'?
-            name = "COMP_" + to_string(comp_idx);
-            comp_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
-            is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
-            G.add_component(name, latencies["COMP"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
-                oline = "";
-            oline += "COMP #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                     "(.a(" + in1 + "), .b(" + in2 + "), .gt(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, ltrgx)) {      // Is the component a '<'?
-            name = "COMP_" + to_string(comp_idx);
-            comp_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
-            is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
-            G.add_component(name, latencies["COMP"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
-                oline = "";
-            oline = oline + "COMP #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .b(" + in2 + "), .lt(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, eqrgx)) {      // Is the component a '=='?
-            name = "COMP_" + to_string(comp_idx);
-            comp_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = max(G.wires[in1]->datawidth, G.wires[in2]->datawidth);
-            is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
-            G.add_component(name, latencies["COMP"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
-                oline = "";
-            oline = oline + "COMP #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .b(" + in2 + "), .eq(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, muxrgx)) {      // Is the component a MUX?
-            name = "MUX2x1_" + to_string(mux_idx);
-            mux_idx++;
-            out1 = result[1];
+        else if (regex_search(line, result, muxrgx)) {
+            out = result[1];
             in1 = result[2];
             in2 = result[3];
             in3 = result[4];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2] ||!G.wires[in3]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
+
+            if(!G.wires[out] || !G.wires[in1] || !G.wires[in2] || !G.wires[in3]){
+                cout << "Undeclared variable in line:"<<line<<endl;
+                return -1;
             }
-            dw = G.wires[out1]->datawidth;
-            G.add_component(name, latencies["MUX2x1"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_to_component(in3, name);
-            G.wire_from_component(out1, name);
-            oline = "MUX2x1 #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in3 + "), .b(" + in2 + "), .sel(" + in1 + "), .d(" + out1 + "));\n";
-            olines.push_back(oline);
+            G.add_component(id, state, out + " <= " + in1 + " ? " + in2 + " : " + in3 + ";\n");
+            G.wire_to_component(in1, id);
+            G.wire_to_component(in2, id);
+            G.wire_to_component(in3, id);
+            G.wire_from_component(out, id);
+            G.components[id]->num_cyc = 1;
+
+            id++;
         }
 
-        else if (regex_search(line, result, shrrgx)) {      // Is the component a SHR?
-            name = "SHR_" + to_string(shr_idx);
-            shr_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = G.wires[out1]->datawidth;
-            G.add_component(name, latencies["SHR"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            oline = "SHR #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .sh_amt(" + in2 + "), .d(" + out1 + "));\n";
-            olines.push_back(oline);
+        else {
+            cout << "Error with line:"<<line<<endl;
+            return -1;
         }
-
-        else if (regex_search(line, result, shlrgx)) {      // Is the component a SHR?
-            name = "SHL_" + to_string(shl_idx);
-            shl_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = G.wires[out1]->datawidth;
-            G.add_component(name, latencies["SHL"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            oline = "SHL #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .sh_amt(" + in2 + "), .d(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, divrgx)) {      // Is the component a DIV?
-            name = "DIV_" + to_string(div_idx);
-            div_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = G.wires[out1]->datawidth;
-            is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
-            G.add_component(name, latencies["DIV"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
-                oline = "";
-            oline = oline + "DIV #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .b(" + in2 + "), .quot(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
-
-        else if (regex_search(line, result, modrgx)) {      // Is the component a MOD?
-            name = "MOD_" + to_string(mod_idx);
-            mod_idx++;
-            out1 = result[1];
-            in1 = result[2];
-            in2 = result[3];
-            if(!G.wires[out1] || !G.wires[in1] || !G.wires[in2]){
-                cout << "Error:"<<"Wire"<<" does not exist"<< endl;
-                return 0;
-            }
-            dw = G.wires[out1]->datawidth;
-            is_signed = G.wires[in1]->is_signed && G.wires[in2]->is_signed;  // Are both inputs signed?
-            G.add_component(name, latencies["MOD"][dw]);
-            G.wire_to_component(in1, name);
-            G.wire_to_component(in2, name);
-            G.wire_from_component(out1, name);
-            if (is_signed)
-                oline = "S";
-            else
-                oline = "";
-            oline = oline + "MOD #(.DATAWIDTH(" + to_string(dw) + ")) " + name +
-                    "(.a(" + in1 + "), .b(" + in2 + "), .rem(" + out1 + "));\n";
-            olines.push_back(oline);
-        }
-        else{
-            if(!(line == "" || line == "\n")){
-                cout << "Error with line:"<<line<<endl;
-            return 0;
-            }
-            
-        }
-
     }
+
+    G.add_state(state);
 
     olines[0] += ");\n";
 
+    G.ASAP(1);
+
+    int j = 0;
+    for (unsigned int i = 0; i < G.states.size(); i++) {
+        G.states[i]->start_cyc = j;
+        j += G.states[i]->num_cyc;
+        G.states[i]->last_cyc = j-1;
+    }
+
+    int q = 0;
+    while (j > 0){
+        j = j >> 1;
+        q++;
+    }
+
+    olines.push_back("  reg [" + to_string(q-1) + ":0] Cycle;\n");
+    olines.push_back("  always @(posedge Clk) begin\n");
+    olines.push_back("    case (Cycle)\n");
+    olines.push_back("      0 : begin\n");
+    olines.push_back("            if (Start) begin\n");
+    olines.push_back("              Cycle <= 1;\n");
+    olines.push_back("            end\n");
+    olines.push_back("          end\n");
+
+    for (unsigned int i = 1; i < G.states.size(); i++) {
+        for (int j = 0; j < G.states[i]->num_cyc; j++) {
+            int abs_cyc = G.states[i]->start_cyc + j;
+            olines.push_back("      " + to_string(abs_cyc) + " : begin\n");
+            auto it = G.states[i]->cycmap.find(j);
+            if (it == G.states[i]->cycmap.end()) {
+
+            }
+            else {
+                for (auto it2 : G.states[i]->cycmap[j]) {
+                    olines.push_back("            " + G.components[it2]->out_str);
+                }
+            }
+            if (abs_cyc < G.states[i]->last_cyc){
+                olines.push_back("            Cycle <= " + to_string(abs_cyc+1) + ";\n");
+            }
+            else {
+
+            }
+            olines.push_back("          end\n");
+        }
+    }
+
+    olines.push_back("    endcase\n");
+    olines.push_back("  end\n");
     olines.push_back("endmodule\n");
 
     ofstream outfile(verilogFile);
 
     if(outfile.is_open()) {
         for (vector<string>::iterator itr = olines.begin(); itr != olines.end(); ++itr) {
-            outfile << *itr;
+            cout << *itr;
         }
     }
+    else {
+        cout << "Unable to write to file "<<verilogFile<<endl;
+        return -1;
+    }
 
-    while (G.num_incomplete > 0)
-        for (auto comp_itr : G.components)
-            G.propagate(comp_itr.first);
-    cout << "Critical Path : " << G.max_latency << " ns\n";
     return 0;
 }
