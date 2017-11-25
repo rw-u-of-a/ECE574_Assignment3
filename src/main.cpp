@@ -66,7 +66,6 @@ int main(int argc, char ** argv) {
     G.inop(0);                  // inop
 
     G.add_state(state);
-    state++;
 
     for(vector<string>::iterator itr = lines.begin(); itr != lines.end(); ++itr) {
         line = *itr;
@@ -93,6 +92,7 @@ int main(int argc, char ** argv) {
                     oline = oline + " " + name;
                     G.add_wire(name, is_signed, dw);    // Add the wire to the HLSM
                     G.wires[name]->from = 0;            // These wires come from inop
+                    G.wires[name]->Rst = false;
                     vbles = result[2];
                     olines[0] += ", ";
                     olines[0] += name;
@@ -113,6 +113,7 @@ int main(int argc, char ** argv) {
                     oline = oline + " " + name;
                     G.add_wire(name, is_signed, dw);    // Add the wire to the HLSM
                     G.wires[name]->to = {-1};           // These wires go to onop
+                    G.wires[name]->Rst = true;
                     vbles = result[2];
                     olines[0] += ", ";
                     olines[0] += name;
@@ -132,6 +133,7 @@ int main(int argc, char ** argv) {
                     name = result[1];                           // name = next reg
                     oline = oline + " " + name;
                     G.add_wire(name, is_signed, dw);
+                    G.wires[name]->Rst = true;
                     vbles = result[2];
                 }
             }
@@ -192,17 +194,24 @@ int main(int argc, char ** argv) {
         }
     }
 
-    G.add_state(state);
-
     olines[0] += ");\n";
 
-    G.ASAP(1);
+    state++;                // Add the "done" state
+    G.add_state(state);
+    G.add_component(id, state, "Done <= 1;\n");
+    G.components[id]->num_cyc = 1;
+    G.add_branch("", state, 0, 0);
 
     int j = 0;
     for (unsigned int i = 0; i < G.states.size(); i++) {
+        G.ASAP(i);
         G.states[i]->start_cyc = j;
         j += G.states[i]->num_cyc;
         G.states[i]->last_cyc = j-1;
+        if (G.states[i]->sbranch.if_state == -1)
+            G.states[i]->sbranch.if_state = state;
+        if (G.states[i]->sbranch.else_state == -1)
+            G.states[i]->sbranch.else_state = state;
     }
 
     int q = 0;
@@ -211,39 +220,50 @@ int main(int argc, char ** argv) {
         q++;
     }
 
-    olines.push_back("  reg [" + to_string(q-1) + ":0] Cycle;\n");
+    olines.push_back("  reg [" + to_string(q-1) + ":0] State;\n");
     olines.push_back("  always @(posedge Clk) begin\n");
-    olines.push_back("    case (Cycle)\n");
-    olines.push_back("      0 : begin\n");
+    olines.push_back("    if (Rst) begin\n");
+    for (auto it : G.wires)
+        if (it.second->Rst)
+            olines.push_back("      " + it.second->name + " <= 0;\n");
+    olines.push_back("      State <= 0;\n");
+    olines.push_back("      Done <= 0;\n");
+    olines.push_back("    end else begin\n");
+    olines.push_back("      case (State)\n");
+    olines.push_back("        0 : begin\n");
     olines.push_back("            if (Start) begin\n");
-    olines.push_back("              Cycle <= 1;\n");
+    olines.push_back("              State <= 1;\n");
     olines.push_back("            end\n");
     olines.push_back("          end\n");
 
     for (unsigned int i = 1; i < G.states.size(); i++) {
         for (int j = 0; j < G.states[i]->num_cyc; j++) {
             int abs_cyc = G.states[i]->start_cyc + j;
-            olines.push_back("      " + to_string(abs_cyc) + " : begin\n");
+            olines.push_back("        " + to_string(abs_cyc) + " : begin\n");
             auto it = G.states[i]->cycmap.find(j);
-            if (it == G.states[i]->cycmap.end()) {
-
-            }
+            if (it == G.states[i]->cycmap.end()) {}
             else {
                 for (auto it2 : G.states[i]->cycmap[j]) {
                     olines.push_back("            " + G.components[it2]->out_str);
                 }
             }
             if (abs_cyc < G.states[i]->last_cyc){
-                olines.push_back("            Cycle <= " + to_string(abs_cyc+1) + ";\n");
+                olines.push_back("            State <= " + to_string(abs_cyc+1) + ";\n");
             }
             else {
-
+                if (G.states[i]->sbranch.cond.empty()) {
+                    int next_state = G.states[i]->sbranch.if_state;
+                    int next_cyc = G.states[next_state]->start_cyc;
+                    olines.push_back("            State <= " + to_string(next_cyc) + ";\n");
+                }
             }
             olines.push_back("          end\n");
         }
     }
 
-    olines.push_back("    endcase\n");
+    olines.push_back("        default : State <= 0;\n");
+    olines.push_back("      endcase\n");
+    olines.push_back("    end\n");
     olines.push_back("  end\n");
     olines.push_back("endmodule\n");
 

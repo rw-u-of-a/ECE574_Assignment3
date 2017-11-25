@@ -15,7 +15,7 @@ int hlsm::inop(int id) {
     states[0]->last_cyc = 0;
     states[0]->num_cyc = 1;
     states[0]->is_parallel = false;
-    add_branch("", 0, 1);
+    add_branch("", 0, 1, 1);
     components[id]->state = 0;
     components[id]->start_cyc = 0;
     components[id]->num_cyc = 1;
@@ -104,15 +104,15 @@ int hlsm::wire_from_component(const string &w, int c){
     return 0;
 }
 
-int hlsm::add_branch(const string &cond, int from_state, int to_state) {
+int hlsm::add_branch(const string &cond, int from_state, int if_state, int else_state) {
     auto it = states.find(from_state);
     if (it == states.end()) {
         cout << "State not found: "<<from_state<<endl;
         return -1;
     }
-    branch *b;
-    b = new branch(cond, from_state, to_state);
-    it->second->branches.push_back(*b);
+    it->second->sbranch.cond = cond;
+    it->second->sbranch.if_state = if_state;
+    it->second->sbranch.else_state = else_state;
     return 0;
 }
 

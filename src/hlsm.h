@@ -36,6 +36,7 @@ struct wire {
     int datawidth;      // datawidth of the wire
     int from;           // id of component with wire as output
     vector<int> to;     // ids of components with wire as input
+    bool Rst;           // Is this affected by Rst?
     wire(string t, bool s, int d) :
             name(t),
             is_signed(s),
@@ -46,12 +47,18 @@ struct wire {
 
 struct branch {
     string cond;
-    int from_state;
-    int to_state;
-    branch(string c, int f, int t) :
+    int if_state;
+    int else_state;
+    branch() :
+    cond(""),
+    if_state(-1),
+    else_state(-1)
+    {};
+
+    branch(string c, int t, int f) :
             cond(c),
-            from_state(f),
-            to_state(t)
+            if_state(t),
+            else_state(f)
     {}
 };
 
@@ -62,7 +69,7 @@ struct statedef {
     int num_cyc;
     map<int,vector<int>> cycmap;
     bool is_parallel;
-    vector<branch> branches;
+    branch sbranch;
     statedef(int s) :
             state(s),
             start_cyc(0),
@@ -87,7 +94,7 @@ public:
     int add_state(int);
     int add_component(int, int, const string&);
     int add_wire(const string&, bool, int);
-    int add_branch(const string&, int, int);
+    int add_branch(const string&, int, int, int);
     int wire_to_component(const string&, int);
     int wire_from_component(const string&, int);
     int ASAP_me(int);
