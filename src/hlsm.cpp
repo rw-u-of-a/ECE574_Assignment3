@@ -4,32 +4,38 @@
 
 #include "hlsm.h"
 
-int hlsm::inop(int id) {
+int hlsm::inop(int id) {                // This turns component id into inop = Wait state
     auto it = components.find(id);
     if (it == components.end()) {
         cout << "inop cannot be defined using id "<<id<<endl;
         return -1;
     }
-    add_state(0);
-    states[0]->start_cyc = 0;
-    states[0]->last_cyc = 0;
-    states[0]->num_cyc = 1;
-    states[0]->is_parallel = false;
-    add_branch("", 0, 1, 1);
-    components[id]->state = 0;
-    components[id]->start_cyc = 0;
-    components[id]->num_cyc = 1;
-    components[id]->end_cyc = 1;
-    components[id]->out_str = "";
-    components[id]->is_scheduled = true;
+    add_state(0);                       // Wait state = 0
+    states[0]->start_cyc = 0;           // Wait starts at cycle 0
+    states[0]->last_cyc = 0;            // Wait has last cycle 0
+    states[0]->num_cyc = 1;             // Wait is one cycle thick
+    add_branch("Start", 0, 1, 0);       // Wait branches to state 1 on start
+    components[id]->state = 0;          // inop lives in state 0
+    components[id]->start_cyc = 0;      // inop starts on cycle 0
+    components[id]->num_cyc = 1;        // inop lasts 1 cycle
+    components[id]->end_cyc = 1;        // inop ends on cycle 1
+    components[id]->out_str = "\n";     // inop cannot be seen
+    components[id]->is_scheduled = true;// inop is scheduled at time 0
     return 0;
 }
 
-int hlsm::add_state(int st) {
-    statedef *s;
-    s = new statedef(st);
-    states[st] = s;
-    return 0;
+int hlsm::add_state(int st) {   // Create a new state, numbered st
+    auto it = states.find(st);
+    if (it == states.end()) {
+        statedef *s;
+        s = new statedef(st);
+        states[st] = s;
+        return 0;
+    }
+    else {
+        cout << "State " << st << " already exists!\n";
+        return -1;
+    }
 }
 
 int hlsm::add_component(int id, int state, const string &out_str) {
@@ -116,44 +122,47 @@ int hlsm::add_branch(const string &cond, int from_state, int if_state, int else_
     return 0;
 }
 
-int hlsm::clear() {
-    for (auto it : components) {
-        it.second->is_scheduled = false;
-    }
-    num_scheduled = 0;
+int hlsm::clear(int st) {
+    for (auto it : components)
+        if (it.second->state == st) {
+            it.second->is_scheduled = false;    // Mark every component in state 'st' as unscheduled
+        }
+    for (auto it : states[st]->cycmap)
+        it.second.clear();                      // Clear the list os scheduled operations
+
     return 0;
 }
 
 int hlsm::ASAP_me(int i) {
-    if(components[i]->is_scheduled)
-        return components[i]->end_cyc;
+    if(components[i]->is_scheduled)         // If component 'i' has already been scheduled,
+        return components[i]->end_cyc;      // return end cycle.
 
-    int max_cyc = 0;
+    int max_cyc = 0;                        // Latest scheduled predecessor end cycle
     int temp;
-    for (auto it : components[i]->ins) {
-        temp = ASAP_me(it);
+    for (auto it : components[i]->ins) {    // Iterate over predecessors of 'i'
+        temp = ASAP_me(it);                 // Returns the end cycle of predecessor 'it'
         if (temp > max_cyc)
             max_cyc = temp;
     }
 
-    components[i]->start_cyc = max_cyc;
-    components[i]->end_cyc = max_cyc + components[i]->num_cyc;
-    components[i]->is_scheduled = true;
-    num_scheduled++;
+    components[i]->start_cyc = max_cyc;     // Schedule 'i' as early as possible
+    components[i]->end_cyc = max_cyc + components[i]->num_cyc;  // Component 'i' lasts 'num_cyc' cycles
+    components[i]->is_scheduled = true;     // Mark as scheduled
     if (components[i]->end_cyc > states[components[i]->state]->num_cyc)
         states[components[i]->state]->num_cyc = components[i]->end_cyc;
     return components[i]->end_cyc;
 }
 
 int hlsm::ASAP(int st){
-    int max_cyc = 0;
-    for (auto it : components) {
-        if (it.second->state == st) {
-            int temp = ASAP_me(it.first);
+    int max_cyc = 0;                        // Keep track of the number of cycles in state 'st'
+    clear(st);                              // Unschedule every component in state 'st'
+    for (auto it : components) {            // Iterate over every component 'it'
+        if (it.second->state == st) {       // Check if state of 'it' is 'st'
+            int temp = ASAP_me(it.first);   // ASAP schedule component 'it'
             if (temp > max_cyc)
                 max_cyc = temp;
             int cyc = it.second->start_cyc;
-            auto it2 = states[st]->cycmap.find(cyc);
+            auto it2 = states[st]->cycmap.find(cyc);    // cycmap keeps track of all components in cycle 'cyc'
             if (it2 == states[st]->cycmap.end()){
                 states[st]->cycmap[cyc].push_back(it.first);
             }
@@ -163,5 +172,47 @@ int hlsm::ASAP(int st){
         }
     }
     states[st]->num_cyc = max_cyc;
+    return 0;
+}
+
+int hlsm::ALAP_me(int i, int lat) {
+    if(components[i]->is_scheduled)         // If component 'i' has already been scheduled,
+        return components[i]->start_cyc;    // return start cycle.
+
+    int min_cyc = lat;                      // Earliest scheduled successor start cycle
+    int temp;
+    for (auto it : components[i]->outs) {   // Iterate over successors of 'i'
+        temp = ALAP_me(it, lat);            // Returns the start cycle of successor 'it'
+        if (temp < min_cyc)
+            min_cyc = temp;
+    }
+
+    components[i]->start_cyc = min_cyc - components[i]->num_cyc;    // Schedule 'i' as late as possible
+    components[i]->end_cyc = min_cyc;                               // Operation ends just before min_cyc
+    components[i]->is_scheduled = true;                             // Mark as scheduled
+
+    return components[i]->start_cyc;
+};
+
+int hlsm::ALAP(int st, int lat) {
+    clear(st);
+    states[st]->num_cyc = lat;
+
+    for (auto it : components) {
+        if (it.second->state == st) {
+            int temp = ALAP_me(it.first, lat);
+            if (temp < 0)
+                return -1;
+            int cyc = it.second->start_cyc;
+            auto it2 = states[st]->cycmap.find(cyc);    // cycmap keeps track of all components in cycle 'cyc'
+            if (it2 == states[st]->cycmap.end()){
+                states[st]->cycmap[cyc].push_back(it.first);
+            }
+            else {
+                it2->second.push_back(it.first);
+            }
+        }
+    }
+
     return 0;
 }

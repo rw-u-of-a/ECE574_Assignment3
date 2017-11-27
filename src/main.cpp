@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <stack>
 #include <regex>
 #include "hlsm.h"
 
@@ -13,20 +14,25 @@ using namespace std;
 
 int main(int argc, char ** argv) {
     string temp, temp2, temp3;
-    if (argc != 3) {//uncomment for running in command line
-        cout << "Incorrect number of arguments" << endl;
+    if (argc != 4) {//uncomment for running in command line
+        cout << "Usage: "<<argv[0]<<" cFile latency verilogFile" << endl;
         return 0;
     }
-    string netlistFile = string(argv[1]);
-    string verilogFile = string(argv[2]);
+    string cFile = string(argv[1]);
+    int latency = stoi(argv[2]);
+    string verilogFile = string(argv[3]);
     string line;
 
     hlsm G;
-    G.num_states = 1;
+
     string name, oline;
     string in1, in2, in3, out, oper;
     vector<string> olines;
     vector<string> lines;
+    stack<int> if_stack;
+    stack<int> else_stack;
+    stack<int> from_stack;
+    bool else_check = false;
     bool is_signed;
     bool multiple;
     int dw;
@@ -39,11 +45,15 @@ int main(int argc, char ** argv) {
                          "[[:space:]]*([[:alnum:]]+)[[:space:]]*(?:$|//)");
     regex muxrgx("^[[:space:]]*([[:alnum:]]+)[[:space:]]*=[[:space:]]*([[:alnum:]]+)[[:space:]]*"
                          "\\?[[:space:]]*([[:alnum:]]+)[[:space:]]*:[[:space:]]*([[:alnum:]]+)[[:space:]]*(?:$|//)");
+    regex ifrgx("^[[:space:]]*if[[:space:]]*\\([[:space:]]*([[:alnum:]]+)[[:space:]]*\\)[[:space:]]*\\{[[:space:]]*(?:$|//)");
+    regex bracrgx("^[[:space:]]*\\}[[:space:]]*(?:$|//)");
+    regex elsergx("^[[:space:]]*else[[:space:]]*\\{[[:space:]]*(?:$|//)");
     smatch result;
-    int id = 1;     // id 0 is inop, id -1 is onop
-    int state = 1;  // state 0 is wait
+    int id = 1;         // id 0 is inop, id -1 is onop
+    int cur_state = 1;  // state 0 is wait
+    int next_avail_state = 2;
 
-    ifstream infile(netlistFile);
+    ifstream infile(cFile);
     if(infile.is_open()){
         while(getline(infile,line)){
             lines.push_back(line);
@@ -65,10 +75,22 @@ int main(int argc, char ** argv) {
     G.add_component(0, 0, "");  // inop
     G.inop(0);                  // inop
 
-    G.add_state(state);
+    G.add_state(cur_state);     // add the first state
 
     for(vector<string>::iterator itr = lines.begin(); itr != lines.end(); ++itr) {
         line = *itr;
+
+        if (else_check) {       // Are we waiting for an else?
+            int prev = from_stack.top();
+            if (regex_search(line, result, elsergx)) {
+                G.states[prev]->sbranch.is_else = true;
+                cur_state = G.states[prev]->sbranch.else_state;
+            }
+            else {
+
+            }
+            else_check = false;
+        }
 
         if (regex_search(line, result, emptyrgx)) {}        // Is the line empty?
 
@@ -151,19 +173,27 @@ int main(int argc, char ** argv) {
                 cout << "Undeclared variable in line:"<<line<<endl;
                 return -1;
             }
-            G.add_component(id, state, out + " <= " + in1 + " " + oper + " " + in2 +";\n");
+            G.add_component(id, cur_state, out + " <= " + in1 + " " + oper + " " + in2 +";\n");
             G.wire_to_component(in1, id);
             G.wire_to_component(in2, id);
             G.wire_from_component(out, id);
 
-            if (oper == "*")
+            if (oper == "*") {
                 G.components[id]->num_cyc = 2;
-            else if (oper == "/")
+                G.components[id]->op = MUL;
+            }
+            else if ((oper == "/") || (oper == "%")) {
                 G.components[id]->num_cyc = 3;
-            else if (oper == "%")
-                G.components[id]->num_cyc = 3;
-            else
+                G.components[id]->op = DIV;
+            }
+            else if ((oper == "+") || (oper == "-")) {
                 G.components[id]->num_cyc = 1;
+                G.components[id]->op = ADD;
+            }
+            else {
+                G.components[id]->num_cyc = 1;
+                G.components[id]->op = LOG;
+            }
 
             id++;
         }
@@ -178,14 +208,39 @@ int main(int argc, char ** argv) {
                 cout << "Undeclared variable in line:"<<line<<endl;
                 return -1;
             }
-            G.add_component(id, state, out + " <= " + in1 + " ? " + in2 + " : " + in3 + ";\n");
+            G.add_component(id, cur_state, out + " <= " + in1 + " ? " + in2 + " : " + in3 + ";\n");
             G.wire_to_component(in1, id);
             G.wire_to_component(in2, id);
             G.wire_to_component(in3, id);
             G.wire_from_component(out, id);
             G.components[id]->num_cyc = 1;
+            G.components[id]->op = LOG;
 
             id++;
+        }
+
+        else if (regex_search(line, result, ifrgx)) {
+            G.states[cur_state]->sbranch.cond = result[1];
+            int if_s = next_avail_state;
+            next_avail_state++;
+            G.states[cur_state]->sbranch.if_state = if_s;   // Branch to newly created state
+            G.states[cur_state]->sbranch.else_state = -1;   // By default else branches to final state
+            from_stack.push(cur_state);
+
+            G.add_component(id, cur_state, "\n");           // We have to create an operation for the if statement
+            G.wire_to_component(result[1], id);             // To ensure that its condition has been calculated
+            G.components[id]->num_cyc = 1;                  // By the time the 'if' statement shows up
+            G.components[id]->op = LOG;                     // For scheduling purposes, let's make it a logic.
+
+            id++;
+            cur_state = if_s;                               // Move into the newly created state branch
+        }
+
+        else if (regex_search(line, result, bracrgx)) {
+            int prev = from_stack.top();
+            from_stack.pop();
+            cur_state = G.states[prev]->sbranch.else_state;
+            else_check = true;      // Check if next line is else
         }
 
         else {
@@ -196,22 +251,26 @@ int main(int argc, char ** argv) {
 
     olines[0] += ");\n";
 
-    state++;                // Add the "done" state
-    G.add_state(state);
-    G.add_component(id, state, "Done <= 1;\n");
+    cur_state = next_avail_state;                // Add the "done" state
+    next_avail_state++;
+    G.add_state(cur_state);
+    G.add_component(id, cur_state, "Done <= 1;\n");
     G.components[id]->num_cyc = 1;
-    G.add_branch("", state, 0, 0);
+    G.add_branch("", cur_state, 0, 0);
 
     int j = 0;
-    for (unsigned int i = 0; i < G.states.size(); i++) {
-        G.ASAP(i);
-        G.states[i]->start_cyc = j;
-        j += G.states[i]->num_cyc;
-        G.states[i]->last_cyc = j-1;
-        if (G.states[i]->sbranch.if_state == -1)
-            G.states[i]->sbranch.if_state = state;
-        if (G.states[i]->sbranch.else_state == -1)
-            G.states[i]->sbranch.else_state = state;
+    for (unsigned int s = 0; s < G.states.size(); s++) {
+        if (s == 1)
+            G.ALAP(s, latency);
+        else
+            G.ASAP(s);
+        G.states[s]->start_cyc = j;
+        j += G.states[s]->num_cyc;
+        G.states[s]->last_cyc = j-1;
+        if (G.states[s]->sbranch.if_state == -1)
+            G.states[s]->sbranch.if_state = cur_state;
+        if (G.states[s]->sbranch.else_state == -1)
+            G.states[s]->sbranch.else_state = cur_state;
     }
 
     int q = 0;
@@ -230,18 +289,18 @@ int main(int argc, char ** argv) {
     olines.push_back("      Done <= 0;\n");
     olines.push_back("    end else begin\n");
     olines.push_back("      case (State)\n");
-    olines.push_back("        0 : begin\n");
-    olines.push_back("            if (Start) begin\n");
-    olines.push_back("              State <= 1;\n");
-    olines.push_back("            end\n");
-    olines.push_back("          end\n");
+//    olines.push_back("        0 : begin\n");
+//    olines.push_back("            if (Start) begin\n");
+//    olines.push_back("              State <= 1;\n");
+//    olines.push_back("            end\n");
+//    olines.push_back("          end\n");
 
-    for (unsigned int i = 1; i < G.states.size(); i++) {
+    for (unsigned int i = 0; i < G.states.size(); i++) {
         for (int j = 0; j < G.states[i]->num_cyc; j++) {
             int abs_cyc = G.states[i]->start_cyc + j;
             olines.push_back("        " + to_string(abs_cyc) + " : begin\n");
             auto it = G.states[i]->cycmap.find(j);
-            if (it == G.states[i]->cycmap.end()) {}
+            if (it == G.states[i]->cycmap.end()) {}     // cycmap has no entry for cycle j
             else {
                 for (auto it2 : G.states[i]->cycmap[j]) {
                     olines.push_back("            " + G.components[it2]->out_str);
@@ -250,11 +309,20 @@ int main(int argc, char ** argv) {
             if (abs_cyc < G.states[i]->last_cyc){
                 olines.push_back("            State <= " + to_string(abs_cyc+1) + ";\n");
             }
-            else {
+            else {          // On the last cycle, branch to next state
+                int next_state = G.states[i]->sbranch.if_state;
+                int next_cyc = G.states[next_state]->start_cyc;
                 if (G.states[i]->sbranch.cond.empty()) {
-                    int next_state = G.states[i]->sbranch.if_state;
-                    int next_cyc = G.states[next_state]->start_cyc;
                     olines.push_back("            State <= " + to_string(next_cyc) + ";\n");
+                }
+                else {
+                    olines.push_back("            if (" + G.states[i]->sbranch.cond +") begin\n");
+                    olines.push_back("              State <= " + to_string(next_cyc) + ";\n");
+                    olines.push_back("            end else begin\n");
+                    next_state = G.states[i]->sbranch.else_state;
+                    next_cyc = G.states[next_state]->start_cyc;
+                    olines.push_back("              State <= " + to_string(next_cyc) + ";\n");
+                    olines.push_back("            end\n");
                 }
             }
             olines.push_back("          end\n");

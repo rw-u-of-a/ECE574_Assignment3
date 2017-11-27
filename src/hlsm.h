@@ -11,9 +11,12 @@
 
 using namespace std;
 
+enum operation {ADD, MUL, LOG, DIV, IF1, IF2};
+
 struct component {
     int id;             // id of the component
     int state;
+    operation op;
     string out_str;
     vector<int> ins;
     vector<int> outs;
@@ -49,10 +52,12 @@ struct branch {
     string cond;
     int if_state;
     int else_state;
+    bool is_else;   // is there an else or nah
     branch() :
-    cond(""),
-    if_state(-1),
-    else_state(-1)
+        cond(""),
+        if_state(-1),
+        else_state(-1),
+        is_else(false)
     {};
 
     branch(string c, int t, int f) :
@@ -68,7 +73,6 @@ struct statedef {
     int last_cyc;
     int num_cyc;
     map<int,vector<int>> cycmap;
-    bool is_parallel;
     branch sbranch;
     statedef(int s) :
             state(s),
@@ -87,7 +91,6 @@ public:
     cmap components;
     wmap wires;
     smap states;
-    int num_states;
     int num_scheduled;
     int num_components;
     int inop(int);
@@ -97,9 +100,11 @@ public:
     int add_branch(const string&, int, int, int);
     int wire_to_component(const string&, int);
     int wire_from_component(const string&, int);
+    int clear(int);
     int ASAP_me(int);
     int ASAP(int);
-    int clear();
+    int ALAP_me(int, int);
+    int ALAP(int, int);
 };
 
 #endif //DPGEN_HLSM_H
