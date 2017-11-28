@@ -19,7 +19,7 @@ int hlsm::inop(int id) {                // This turns component id into inop = W
     components[id]->start_cyc = 0;      // inop starts on cycle 0
     components[id]->num_cyc = 1;        // inop lasts 1 cycle
     components[id]->end_cyc = 1;        // inop ends on cycle 1
-    components[id]->out_str = "\n";     // inop cannot be seen
+    components[id]->out_str = "";       // inop cannot be seen
     components[id]->is_scheduled = true;// inop is scheduled at time 0
     return 0;
 }
@@ -122,13 +122,37 @@ int hlsm::add_branch(const string &cond, int from_state, int if_state, int else_
     return 0;
 }
 
+int hlsm::set_child_state(int st, int cst) {
+    auto it = states.find(st);
+    if (it == states.end()) {
+        cout << "Could not set child states for: "<<st<<endl;
+        return -1;
+    }
+
+    if (states[st]->sbranch.if_state == -1){
+        states[st]->sbranch.if_state = cst;
+    }
+    else if (states[st]->sbranch.if_state != cst) {
+        set_child_state(states[st]->sbranch.if_state, cst);
+    }
+
+    if (states[st]->sbranch.else_state == -1) {
+        states[st]->sbranch.else_state = cst;
+    }
+    else if (states[st]->sbranch.else_state != cst) {
+        set_child_state(states[st]->sbranch.else_state, cst);
+    }
+
+    return 0;
+}
+
 int hlsm::clear(int st) {
     for (auto it : components)
         if (it.second->state == st) {
             it.second->is_scheduled = false;    // Mark every component in state 'st' as unscheduled
         }
     for (auto it : states[st]->cycmap)
-        it.second.clear();                      // Clear the list os scheduled operations
+        states[st]->cycmap[it.first].clear();   // Clear the list of scheduled operations
 
     return 0;
 }

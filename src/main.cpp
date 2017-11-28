@@ -29,10 +29,6 @@ int main(int argc, char ** argv) {
     string in1, in2, in3, out, oper;
     vector<string> olines;
     vector<string> lines;
-    stack<int> if_stack;
-    stack<int> else_stack;
-    stack<int> from_stack;
-    bool else_check = false;
     bool is_signed;
     bool multiple;
     int dw;
@@ -51,6 +47,8 @@ int main(int argc, char ** argv) {
     smatch result;
     int id = 1;         // id 0 is inop, id -1 is onop
     int cur_state = 1;  // state 0 is wait
+    readstate cur_readstate = READ;
+    stack<pair<int,readstate>> state_stack;
     int next_avail_state = 2;
 
     ifstream infile(cFile);
@@ -61,10 +59,10 @@ int main(int argc, char ** argv) {
         infile.close();
     }
     else{
-        cout << "File could not be opened"<<endl;
+        cout << "File "<<cFile<<" could not be opened"<<endl;
         return 0;
     }
-    temp3 = argv[2];
+    temp3 = verilogFile;
     size_t pos = temp3.find(".v");
     string netlistname = temp3.substr(0,pos);
 
@@ -79,18 +77,6 @@ int main(int argc, char ** argv) {
 
     for(vector<string>::iterator itr = lines.begin(); itr != lines.end(); ++itr) {
         line = *itr;
-
-        if (else_check) {       // Are we waiting for an else?
-            int prev = from_stack.top();
-            if (regex_search(line, result, elsergx)) {
-                G.states[prev]->sbranch.is_else = true;
-                cur_state = G.states[prev]->sbranch.else_state;
-            }
-            else {
-
-            }
-            else_check = false;
-        }
 
         if (regex_search(line, result, emptyrgx)) {}        // Is the line empty?
 
@@ -164,6 +150,16 @@ int main(int argc, char ** argv) {
         }
 
         else if (regex_search(line, result, comrgx)) {
+            if (cur_readstate != READ) {
+                int prev = cur_state;
+                cur_state = next_avail_state;
+                next_avail_state++;
+                G.add_state(cur_state);
+                G.set_child_state(prev, cur_state);
+
+                cur_readstate = READ;
+            }
+
             out = result[1];
             in1 = result[2];
             oper = result[3];
@@ -173,7 +169,7 @@ int main(int argc, char ** argv) {
                 cout << "Undeclared variable in line:"<<line<<endl;
                 return -1;
             }
-            G.add_component(id, cur_state, out + " <= " + in1 + " " + oper + " " + in2 +";\n");
+            G.add_component(id, cur_state, out + " <= " + in1 + " " + oper + " " + in2 + ";");
             G.wire_to_component(in1, id);
             G.wire_to_component(in2, id);
             G.wire_from_component(out, id);
@@ -199,6 +195,18 @@ int main(int argc, char ** argv) {
         }
 
         else if (regex_search(line, result, muxrgx)) {
+            if (cur_readstate != READ) {
+                int prev = cur_state;
+
+                cur_state = next_avail_state;
+                next_avail_state++;
+                G.add_state(cur_state);
+
+                G.set_child_state(prev, cur_state);
+
+                cur_readstate = READ;
+            }
+
             out = result[1];
             in1 = result[2];
             in2 = result[3];
@@ -208,7 +216,7 @@ int main(int argc, char ** argv) {
                 cout << "Undeclared variable in line:"<<line<<endl;
                 return -1;
             }
-            G.add_component(id, cur_state, out + " <= " + in1 + " ? " + in2 + " : " + in3 + ";\n");
+            G.add_component(id, cur_state, out + " <= " + in1 + " ? " + in2 + " : " + in3 + ";");
             G.wire_to_component(in1, id);
             G.wire_to_component(in2, id);
             G.wire_to_component(in3, id);
@@ -220,27 +228,65 @@ int main(int argc, char ** argv) {
         }
 
         else if (regex_search(line, result, ifrgx)) {
-            G.states[cur_state]->sbranch.cond = result[1];
-            int if_s = next_avail_state;
-            next_avail_state++;
-            G.states[cur_state]->sbranch.if_state = if_s;   // Branch to newly created state
-            G.states[cur_state]->sbranch.else_state = -1;   // By default else branches to final state
-            from_stack.push(cur_state);
+            if (cur_readstate != READ) {
+                int prev = cur_state;
 
-            G.add_component(id, cur_state, "\n");           // We have to create an operation for the if statement
+                cur_state = next_avail_state;
+                next_avail_state++;
+                G.add_state(cur_state);
+
+                G.set_child_state(prev, cur_state);
+
+                cur_readstate = READ;
+            }
+
+            G.add_component(id, cur_state, "");           // We have to create an operation for the if statement
             G.wire_to_component(result[1], id);             // To ensure that its condition has been calculated
             G.components[id]->num_cyc = 1;                  // By the time the 'if' statement shows up
             G.components[id]->op = LOG;                     // For scheduling purposes, let's make it a logic.
-
             id++;
+
+            G.states[cur_state]->sbranch.cond = result[1];
+            int if_s = next_avail_state;
+            next_avail_state++;
+            G.add_state(if_s);
+
+            G.states[cur_state]->sbranch.if_state = if_s;   // Branch to newly created state
+            G.states[cur_state]->sbranch.else_state = -1;   // By default else branches to final state
+
+            cur_readstate = IF;
+            state_stack.push(make_pair(cur_state, cur_readstate));
+
             cur_state = if_s;                               // Move into the newly created state branch
+            cur_readstate = READ;                           // Get ready to read the next line
         }
 
         else if (regex_search(line, result, bracrgx)) {
-            int prev = from_stack.top();
-            from_stack.pop();
-            cur_state = G.states[prev]->sbranch.else_state;
-            else_check = true;      // Check if next line is else
+            if (state_stack.empty()) {
+                cout << "Syntax error: extra '}'" << endl;
+                return -1;
+            }
+            cur_state = state_stack.top().first;
+            cur_readstate = state_stack.top().second;
+            state_stack.pop();
+        }
+
+        else if (regex_search(line, result, elsergx)) {
+            if (cur_readstate != IF) {
+                cout << "Syntax error: incorrect 'else'" << endl;
+                return -1;
+            }
+            int else_state = next_avail_state;
+            next_avail_state++;
+            G.add_state(else_state);
+            G.states[cur_state]->sbranch.else_state = else_state;
+            G.states[cur_state]->sbranch.is_else = true;
+
+            cur_readstate = ELSE;
+            state_stack.push(make_pair(cur_state, cur_readstate));
+
+            cur_state = G.states[cur_state]->sbranch.else_state;
+            cur_readstate = READ;
         }
 
         else {
@@ -254,24 +300,36 @@ int main(int argc, char ** argv) {
     cur_state = next_avail_state;                // Add the "done" state
     next_avail_state++;
     G.add_state(cur_state);
-    G.add_component(id, cur_state, "Done <= 1;\n");
+    G.add_component(id, cur_state, "Done <= 1;");
     G.components[id]->num_cyc = 1;
-    G.add_branch("", cur_state, 0, 0);
+    id++;
+    G.add_branch("", cur_state, 0, 0);          // Loop back to the Wait state
 
+
+
+    // *Schedule stuff goes here*
     int j = 0;
-    for (unsigned int s = 0; s < G.states.size(); s++) {
-        if (s == 1)
-            G.ALAP(s, latency);
-        else
+    unsigned int s = 0;
+    for (s = 0; s < G.states.size(); s++) {
+        if (s == 1) {
+            if (G.ALAP(s, latency)) {
+                cout << "Latency too short" << endl;
+                return -1;
+            }
             G.ASAP(s);
+        }
+        else {
+            G.ASAP(s);
+        }
         G.states[s]->start_cyc = j;
+        G.states[s]->last_cyc = j + G.states[s]->num_cyc - 1;
         j += G.states[s]->num_cyc;
-        G.states[s]->last_cyc = j-1;
         if (G.states[s]->sbranch.if_state == -1)
             G.states[s]->sbranch.if_state = cur_state;
         if (G.states[s]->sbranch.else_state == -1)
             G.states[s]->sbranch.else_state = cur_state;
     }
+    j -= 1;     // Overcounted by one
 
     int q = 0;
     while (j > 0){
@@ -289,11 +347,6 @@ int main(int argc, char ** argv) {
     olines.push_back("      Done <= 0;\n");
     olines.push_back("    end else begin\n");
     olines.push_back("      case (State)\n");
-//    olines.push_back("        0 : begin\n");
-//    olines.push_back("            if (Start) begin\n");
-//    olines.push_back("              State <= 1;\n");
-//    olines.push_back("            end\n");
-//    olines.push_back("          end\n");
 
     for (unsigned int i = 0; i < G.states.size(); i++) {
         for (int j = 0; j < G.states[i]->num_cyc; j++) {
@@ -303,10 +356,12 @@ int main(int argc, char ** argv) {
             if (it == G.states[i]->cycmap.end()) {}     // cycmap has no entry for cycle j
             else {
                 for (auto it2 : G.states[i]->cycmap[j]) {
-                    olines.push_back("            " + G.components[it2]->out_str);
+                    if (!G.components[it2]->out_str.empty()) {
+                        olines.push_back("            " + G.components[it2]->out_str + "\n");
+                    }
                 }
             }
-            if (abs_cyc < G.states[i]->last_cyc){
+            if (abs_cyc < G.states[i]->last_cyc) {
                 olines.push_back("            State <= " + to_string(abs_cyc+1) + ";\n");
             }
             else {          // On the last cycle, branch to next state

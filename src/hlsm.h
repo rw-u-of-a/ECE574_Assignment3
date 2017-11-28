@@ -11,7 +11,8 @@
 
 using namespace std;
 
-enum operation {ADD, MUL, LOG, DIV, IF1, IF2};
+enum operation {ADD, MUL, LOG, DIV, IF1};
+enum readstate {READ, IF, ELSE};
 
 struct component {
     int id;             // id of the component
@@ -95,6 +96,7 @@ public:
     int num_components;
     int inop(int);
     int add_state(int);
+    int set_child_state(int, int);
     int add_component(int, int, const string&);
     int add_wire(const string&, bool, int);
     int add_branch(const string&, int, int, int);
