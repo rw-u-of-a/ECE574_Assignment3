@@ -195,6 +195,7 @@ int hlsm::ASAP(int st){
             }
         }
     }
+    states[st]->ASAP_lat = max_cyc;
     states[st]->num_cyc = max_cyc;
     return 0;
 }

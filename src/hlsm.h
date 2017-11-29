@@ -73,6 +73,7 @@ struct statedef {
     int start_cyc;
     int last_cyc;
     int num_cyc;
+    int ASAP_lat;
     map<int,vector<int>> cycmap;
     branch sbranch;
     statedef(int s) :

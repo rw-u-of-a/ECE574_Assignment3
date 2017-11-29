@@ -109,9 +109,9 @@ int main(int argc, char ** argv) {
 
             else if (dectype == "output") {
                 if (dw == 1)
-                    oline = "  output";
+                    oline = "  output reg";             // Because "output reg [0:0]" looks ugly
                 else
-                    oline = "  output [" + to_string(dw - 1) + ":0]";
+                    oline = "  output reg [" + to_string(dw - 1) + ":0]";
                 multiple = false;
                 while (regex_search(vbles, result, vblesrgx)) { // While there are more outputs to declare
                     if (multiple)
@@ -213,7 +213,7 @@ int main(int argc, char ** argv) {
             in3 = result[4];
 
             if(!G.wires[out] || !G.wires[in1] || !G.wires[in2] || !G.wires[in3]){
-                cout << "Undeclared variable in line:"<<line<<endl;
+                cout << "Undeclared variable in line: "<<line<<endl;
                 return -1;
             }
             G.add_component(id, cur_state, out + " <= " + in1 + " ? " + in2 + " : " + in3 + ";");
@@ -308,19 +308,22 @@ int main(int argc, char ** argv) {
 
 
     // *Schedule stuff goes here*
-    int j = 0;
     unsigned int s = 0;
     for (s = 0; s < G.states.size(); s++) {
-        if (s == 1) {
-            if (G.ALAP(s, latency)) {
-                cout << "Latency too short" << endl;
-                return -1;
-            }
-            G.ASAP(s);
-        }
-        else {
-            G.ASAP(s);
-        }
+        G.ASAP(s);
+    }
+//        if (s == 1) {
+//            if (G.ALAP(s, latency)) {
+//                cout << "Latency too short" << endl;
+//                return -1;
+//            }
+//            G.ASAP(s);
+//        } else {
+//            G.ASAP(s);
+//        }
+
+    int j = 0;
+    for (s = 0; s < G.states.size(); s++) {
         G.states[s]->start_cyc = j;
         G.states[s]->last_cyc = j + G.states[s]->num_cyc - 1;
         j += G.states[s]->num_cyc;
@@ -330,13 +333,14 @@ int main(int argc, char ** argv) {
             G.states[s]->sbranch.else_state = cur_state;
     }
     j -= 1;     // Overcounted by one
-
-    int q = 0;
+    int q = 0;  // Number of bits in State, minus one
     while (j > 0){
         j = j >> 1;
         q++;
     }
 
+
+    // Output stuff goes here
     olines.push_back("  reg [" + to_string(q-1) + ":0] State;\n");
     olines.push_back("  always @(posedge Clk) begin\n");
     olines.push_back("    if (Rst) begin\n");
