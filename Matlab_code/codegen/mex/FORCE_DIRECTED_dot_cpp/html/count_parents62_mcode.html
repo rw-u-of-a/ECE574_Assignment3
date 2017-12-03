@@ -1,0 +1,376 @@
+<!-- saved from url=(0014)about:internet -->
+<div class="dead">
+<pre class="code">
+<span class="srcline"><span class="lineno"><a href="1,1" id="srcline1">  1</a></span><span class="line">function OUTPUT_SCHEDULE = FORCE_DIRECTED_dot_cpp(operations, Latency)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,2" id="srcline2">  2</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,3" id="srcline3">  3</a></span><span class="line">in = 0;        <span class="comment">% input nop</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,4" id="srcline4">  4</a></span><span class="line">out = inf;     <span class="comment">% output nop</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,5" id="srcline5">  5</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,6" id="srcline6">  6</a></span><span class="line">if nargin == 0</span></span>
+<span class="srcline"><span class="lineno"><a href="1,7" id="srcline7">  7</a></span><span class="line">    <span class="comment">% Test Case and input discription</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,8" id="srcline8">  8</a></span><span class="line">    <span class="comment">% Values got from the FDS example in the HLSM_Scheduling slides</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,9" id="srcline9">  9</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,10" id="srcline10"> 10</a></span><span class="line">    <span class="comment">% number each operation node</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,11" id="srcline11"> 11</a></span><span class="line">    <span class="comment">% order doesn't matter as long as it's consistant</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,12" id="srcline12"> 12</a></span><span class="line">    operations.numbers = 1:11;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,13" id="srcline13"> 13</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,14" id="srcline14"> 14</a></span><span class="line">    <span class="comment">% a record of all of the 'children' of each operation</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,15" id="srcline15"> 15</a></span><span class="line">    <span class="comment">% a 'child' is a an operation that will depend on the current operation</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,16" id="srcline16"> 16</a></span><span class="line">    <span class="comment">% operations.children{5} will be an array of all of the 'children' for</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,17" id="srcline17"> 17</a></span><span class="line">    <span class="comment">% the operation that was given the node number '5'</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,18" id="srcline18"> 18</a></span><span class="line">    operations.children = {[3] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,19" id="srcline19"> 19</a></span><span class="line">        [3] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,20" id="srcline20"> 20</a></span><span class="line">        [4] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,21" id="srcline21"> 21</a></span><span class="line">        [5] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,22" id="srcline22"> 22</a></span><span class="line">        [out] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,23" id="srcline23"> 23</a></span><span class="line">        [7] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,24" id="srcline24"> 24</a></span><span class="line">        [5] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,25" id="srcline25"> 25</a></span><span class="line">        [9] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,26" id="srcline26"> 26</a></span><span class="line">        [out] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,27" id="srcline27"> 27</a></span><span class="line">        [11] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,28" id="srcline28"> 28</a></span><span class="line">        [out] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,29" id="srcline29"> 29</a></span><span class="line">        };</span></span>
+<span class="srcline"><span class="lineno"><a href="1,30" id="srcline30"> 30</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,31" id="srcline31"> 31</a></span><span class="line">    <span class="comment">% a record of all of the 'parents' of each operation</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,32" id="srcline32"> 32</a></span><span class="line">    <span class="comment">% a 'parent' is a an operation that the current operation depends on</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,33" id="srcline33"> 33</a></span><span class="line">    <span class="comment">% operations.parents{5} will be an array of all of the 'parents' for</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,34" id="srcline34"> 34</a></span><span class="line">    <span class="comment">% the operation that was given the node number '5'</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,35" id="srcline35"> 35</a></span><span class="line">    operations.parents = {[in] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,36" id="srcline36"> 36</a></span><span class="line">        [in] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,37" id="srcline37"> 37</a></span><span class="line">        [1, 2] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,38" id="srcline38"> 38</a></span><span class="line">        [3] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,39" id="srcline39"> 39</a></span><span class="line">        [4, 7] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,40" id="srcline40"> 40</a></span><span class="line">        [in] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,41" id="srcline41"> 41</a></span><span class="line">        [6] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,42" id="srcline42"> 42</a></span><span class="line">        [in] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,43" id="srcline43"> 43</a></span><span class="line">        [8] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,44" id="srcline44"> 44</a></span><span class="line">        [in] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,45" id="srcline45"> 45</a></span><span class="line">        [10] ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,46" id="srcline46"> 46</a></span><span class="line">        };</span></span>
+<span class="srcline"><span class="lineno"><a href="1,47" id="srcline47"> 47</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,48" id="srcline48"> 48</a></span><span class="line">    <span class="comment">% a record of which resource each node is using</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,49" id="srcline49"> 49</a></span><span class="line">    <span class="comment">% Let's say the resource type is an enumuration with ALU = 1 and</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,50" id="srcline50"> 50</a></span><span class="line">    <span class="comment">% MULT = 2, for this test case</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,51" id="srcline51"> 51</a></span><span class="line">    operations.resource = [ 2 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,52" id="srcline52"> 52</a></span><span class="line">        2 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,53" id="srcline53"> 53</a></span><span class="line">        2 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,54" id="srcline54"> 54</a></span><span class="line">        1 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,55" id="srcline55"> 55</a></span><span class="line">        1 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,56" id="srcline56"> 56</a></span><span class="line">        2 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,57" id="srcline57"> 57</a></span><span class="line">        2 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,58" id="srcline58"> 58</a></span><span class="line">        2 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,59" id="srcline59"> 59</a></span><span class="line">        1 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,60" id="srcline60"> 60</a></span><span class="line">        1 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,61" id="srcline61"> 61</a></span><span class="line">        1 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,62" id="srcline62"> 62</a></span><span class="line">        ];</span></span>
+<span class="srcline"><span class="lineno"><a href="1,63" id="srcline63"> 63</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,64" id="srcline64"> 64</a></span><span class="line">    <span class="comment">% a record of which operations have been scheduled already</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,65" id="srcline65"> 65</a></span><span class="line">    <span class="comment">% should always start out with everything as false</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,66" id="srcline66"> 66</a></span><span class="line">    operations.scheduled = [ false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,67" id="srcline67"> 67</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,68" id="srcline68"> 68</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,69" id="srcline69"> 69</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,70" id="srcline70"> 70</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,71" id="srcline71"> 71</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,72" id="srcline72"> 72</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,73" id="srcline73"> 73</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,74" id="srcline74"> 74</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,75" id="srcline75"> 75</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,76" id="srcline76"> 76</a></span><span class="line">        false ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,77" id="srcline77"> 77</a></span><span class="line">        ];</span></span>
+<span class="srcline"><span class="lineno"><a href="1,78" id="srcline78"> 78</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,79" id="srcline79"> 79</a></span><span class="line">    <span class="comment">% Latency</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,80" id="srcline80"> 80</a></span><span class="line">    Latency = 6;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,81" id="srcline81"> 81</a></span><span class="line">    <span class="comment">% Latency was 4 in the in-class example. but that doesn't work when</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,82" id="srcline82"> 82</a></span><span class="line">    <span class="comment">% MULT's have a latency of 2</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,83" id="srcline83"> 83</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,84" id="srcline84"> 84</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,85" id="srcline85"> 85</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,86" id="srcline86"> 86</a></span><span class="line">all_operations_scheduled = false;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,87" id="srcline87"> 87</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,88" id="srcline88"> 88</a></span><span class="line"><span class="comment">%init output</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,89" id="srcline89"> 89</a></span><span class="line"><span class="comment">% the output of this function is a cell array where each cell represents</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,90" id="srcline90"> 90</a></span><span class="line"><span class="comment">% a time cycle, and the contents of the cell is an array of all the</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,91" id="srcline91"> 91</a></span><span class="line"><span class="comment">% nodes that should be scheduled in that cycle</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,92" id="srcline92"> 92</a></span><span class="line"><span class="comment">% OUTPUT_SCHEDULE = cell(Latency,1);</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,93" id="srcline93"> 93</a></span><span class="line">OUTPUT_SCHEDULE = zeros(numel(operations.numbers));</span></span>
+<span class="srcline"><span class="lineno"><a href="1,94" id="srcline94"> 94</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,95" id="srcline95"> 95</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,96" id="srcline96"> 96</a></span><span class="line"><span class="comment">% ALU is resource 1 with latency of 1 cycle</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,97" id="srcline97"> 97</a></span><span class="line"><span class="comment">% MULT is resource 2 with latency of 2 cycles</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,98" id="srcline98"> 98</a></span><span class="line"><span class="comment">% DIV/MOD is resource 3 with latency of 3 cycles</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,99" id="srcline99"> 99</a></span><span class="line">Resource_Latency = [ 1 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,100" id="srcline100">100</a></span><span class="line">    2 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,101" id="srcline101">101</a></span><span class="line">    3 ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,102" id="srcline102">102</a></span><span class="line">    ];</span></span>
+<span class="srcline"><span class="lineno"><a href="1,103" id="srcline103">103</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,104" id="srcline104">104</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,105" id="srcline105">105</a></span><span class="line"><span class="comment">%% Compute the time frames</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,106" id="srcline106">106</a></span><span class="line">Time_Frames = zeros(numel(operations.numbers), 2);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,107" id="srcline107">107</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,108" id="srcline108">108</a></span><span class="line"><span class="comment">%ASAP Schedule</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,109" id="srcline109">109</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,110" id="srcline110">110</a></span><span class="line"><span class="comment">% ASAP = cell(Latency,1);</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,111" id="srcline111">111</a></span><span class="line">ASAP = -1*ones(Latency,numel(operations.numbers));</span></span>
+<span class="srcline"><span class="lineno"><a href="1,112" id="srcline112">112</a></span><span class="line">parent_count = zeros(numel(operations.numbers),1);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,113" id="srcline113">113</a></span><span class="line">op_num = 1;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,114" id="srcline114">114</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,115" id="srcline115">115</a></span><span class="line"><span class="comment">% loop through each node</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,116" id="srcline116">116</a></span><span class="line">for v = 1:numel(operations.numbers)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,117" id="srcline117">117</a></span><span class="line">    <span class="comment">% find how many generations of parents this node has</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,118" id="srcline118">118</a></span><span class="line">    parent_count(operations.numbers(v)) = count_parents(operations.numbers(v), parent_count(operations.numbers(v)), operations, Resource_Latency);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,119" id="srcline119">119</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,120" id="srcline120">120</a></span><span class="line">    if parent_count(operations.numbers(v)) &lt; Latency</span></span>
+<span class="srcline"><span class="lineno"><a href="1,121" id="srcline121">121</a></span><span class="line">        <span class="comment">% the number of generations of parents is the location in the ASAP Schedule</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,122" id="srcline122">122</a></span><span class="line">        op_num = numel(operations.numbers) - sum(ASAP(parent_count(operations.numbers(v))+1,:) &gt; -1) + 1;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,123" id="srcline123">123</a></span><span class="line">        ASAP(parent_count(operations.numbers(v))+1,op_num) = operations.numbers(v);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,124" id="srcline124">124</a></span><span class="line">        Time_Frames(operations.numbers(v),1) = parent_count(operations.numbers(v))+1; <span class="comment">% First part of Time Frame is Soonest possible time</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,125" id="srcline125">125</a></span><span class="line">    else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,126" id="srcline126">126</a></span><span class="line">        <span class="comment">%disp(['Cant Schedule Node #' num2str(v) ' in ASAP'])</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,127" id="srcline127">127</a></span><span class="line">        disp(['Cant Schedule This Node in ASAP'])</span></span>
+<span class="srcline"><span class="lineno"><a href="1,128" id="srcline128">128</a></span><span class="line">    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,129" id="srcline129">129</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,130" id="srcline130">130</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,131" id="srcline131">131</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,132" id="srcline132">132</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,133" id="srcline133">133</a></span><span class="line"><span class="comment">%ALAP Schedule</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,134" id="srcline134">134</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,135" id="srcline135">135</a></span><span class="line"><span class="comment">% ALAP = cell(Latency,1);</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,136" id="srcline136">136</a></span><span class="line">ALAP = -1*ones(Latency,numel(operations.numbers))</span></span>
+<span class="srcline"><span class="lineno"><a href="1,137" id="srcline137">137</a></span><span class="line">child_count = zeros(numel(operations.numbers),1);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,138" id="srcline138">138</a></span><span class="line">op_num = 1;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,139" id="srcline139">139</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,140" id="srcline140">140</a></span><span class="line"><span class="comment">% Look for operations that have no children</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,141" id="srcline141">141</a></span><span class="line">for v = 1:numel(operations.numbers)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,142" id="srcline142">142</a></span><span class="line">    <span class="comment">% find how many generations of children this node has</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,143" id="srcline143">143</a></span><span class="line">    child_count(operations.numbers(v)) = count_children(operations.numbers(v), child_count(operations.numbers(v)), operations, Resource_Latency);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,144" id="srcline144">144</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,145" id="srcline145">145</a></span><span class="line">    if child_count(operations.numbers(v)) &lt; Latency</span></span>
+<span class="srcline"><span class="lineno"><a href="1,146" id="srcline146">146</a></span><span class="line">        <span class="comment">% the number of generations of children is the reverse location in the ALAP Schedule</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,147" id="srcline147">147</a></span><span class="line">        op_num = numel(operations.numbers) - sum(ALAP(Latency - child_count(operations.numbers(v)),:) &gt; -1) + 1;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,148" id="srcline148">148</a></span><span class="line">        ALAP(Latency - child_count(operations.numbers(v)),op_num) = operations.numbers(v);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,149" id="srcline149">149</a></span><span class="line">        Time_Frames(operations.numbers(v),2) = Latency - child_count(operations.numbers(v)); <span class="comment">% Second part of Time Frame is Latest possible time</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,150" id="srcline150">150</a></span><span class="line">    else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,151" id="srcline151">151</a></span><span class="line">        <span class="comment">%disp(['Cant Schedule Node #' num2str(v) ' in ALAP'])</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,152" id="srcline152">152</a></span><span class="line">        disp(['Cant Schedule This Node in ASAP'])</span></span>
+<span class="srcline"><span class="lineno"><a href="1,153" id="srcline153">153</a></span><span class="line">    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,154" id="srcline154">154</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,155" id="srcline155">155</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,156" id="srcline156">156</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,157" id="srcline157">157</a></span><span class="line">while ~all_operations_scheduled</span></span>
+<span class="srcline"><span class="lineno"><a href="1,158" id="srcline158">158</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,159" id="srcline159">159</a></span><span class="line">    <span class="comment">%% Compute the operations and type probabilities</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,160" id="srcline160">160</a></span><span class="line">    Operation_Probability = zeros(numel(operations.numbers), Latency);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,161" id="srcline161">161</a></span><span class="line">    Type_Probability = zeros(numel(unique(operations.resource)), Latency);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,162" id="srcline162">162</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,163" id="srcline163">163</a></span><span class="line">    for t = 1:Latency      <span class="comment">%Loop through each cycle</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,164" id="srcline164">164</a></span><span class="line">        for v = 1:numel(operations.numbers)  <span class="comment">%Loop through each operations</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,165" id="srcline165">165</a></span><span class="line">            <span class="comment">% if the current cycle is within the time frame for this operation</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,166" id="srcline166">166</a></span><span class="line">            if t &gt;= Time_Frames(v,1) &amp;&amp; t &lt;= Time_Frames(v,2)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,167" id="srcline167">167</a></span><span class="line">                <span class="comment">% then the probability is the recipricol of the range of the Time Frame</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,168" id="srcline168">168</a></span><span class="line">                Operation_Probability(v,t) = 1/(Time_Frames(v,2) - Time_Frames(v,1) + 1);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,169" id="srcline169">169</a></span><span class="line">            else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,170" id="srcline170">170</a></span><span class="line">                <span class="comment">% else the probablility is 0</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,171" id="srcline171">171</a></span><span class="line">                Operation_Probability(v,t) = 0;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,172" id="srcline172">172</a></span><span class="line">            end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,173" id="srcline173">173</a></span><span class="line">            Type_Probability(operations.resource(v),t) = Operation_Probability(v,t) + Type_Probability(operations.resource(v),t); <span class="comment">% +=</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,174" id="srcline174">174</a></span><span class="line">        end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,175" id="srcline175">175</a></span><span class="line">    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,176" id="srcline176">176</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,177" id="srcline177">177</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,178" id="srcline178">178</a></span><span class="line">    <span class="comment">%% Compute the self-forces, predecessor/succesor forces and total forces</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,179" id="srcline179">179</a></span><span class="line">    <span class="comment">% Calculate All Self Forces</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,180" id="srcline180">180</a></span><span class="line">    Self_Force = zeros(numel(operations.numbers), Latency);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,181" id="srcline181">181</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,182" id="srcline182">182</a></span><span class="line">    for t = 1:Latency      <span class="comment">%Loop through each cycle</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,183" id="srcline183">183</a></span><span class="line">        for v = 1:numel(operations.numbers)  <span class="comment">%Loop through each operations</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,184" id="srcline184">184</a></span><span class="line">            <span class="comment">% if the current cycle is within the time frame for this operation</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,185" id="srcline185">185</a></span><span class="line">            if t &gt;= Time_Frames(v,1) &amp;&amp; t &lt;= Time_Frames(v,2)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,186" id="srcline186">186</a></span><span class="line">                for c = 1:Latency <span class="comment">%Loop through each cycle again</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,187" id="srcline187">187</a></span><span class="line">                    Self_Force(v, t) = Type_Probability(operations.resource(v),c)*((c == t) - Operation_Probability(v,c)) + Self_Force(v, t); <span class="comment">% +=</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,188" id="srcline188">188</a></span><span class="line">                end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,189" id="srcline189">189</a></span><span class="line">            else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,190" id="srcline190">190</a></span><span class="line">                <span class="comment">% set self force to Inf becuase operation can't be scheduled this cycle</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,191" id="srcline191">191</a></span><span class="line">                Self_Force(v, t) = inf;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,192" id="srcline192">192</a></span><span class="line">            end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,193" id="srcline193">193</a></span><span class="line">        end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,194" id="srcline194">194</a></span><span class="line">    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,195" id="srcline195">195</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,196" id="srcline196">196</a></span><span class="line">    <span class="comment">% Calculate All Predecessor/Successor Forces</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,197" id="srcline197">197</a></span><span class="line">    Predecessor_Force = zeros(numel(operations.numbers), Latency);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,198" id="srcline198">198</a></span><span class="line">    Successor_Force = zeros(numel(operations.numbers), Latency);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,199" id="srcline199">199</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,200" id="srcline200">200</a></span><span class="line">    for t = 1:Latency           <span class="comment">%Loop through each cycle</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,201" id="srcline201">201</a></span><span class="line">        for v = 1:numel(operations.numbers)     <span class="comment">%Loop through each operations</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,202" id="srcline202">202</a></span><span class="line">            <span class="comment">% if the current cycle is within the time frame for this operation</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,203" id="srcline203">203</a></span><span class="line">            if t &gt;= Time_Frames(v,1) &amp;&amp; t &lt;= Time_Frames(v,2)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,204" id="srcline204">204</a></span><span class="line">                for p = 1:numel(operations.parents(v,:))  <span class="comment">%Loop through all of this operation's parents</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,205" id="srcline205">205</a></span><span class="line">                    if p&gt;0</span></span>
+<span class="srcline"><span class="lineno"><a href="1,206" id="srcline206">206</a></span><span class="line">                        <span class="comment">% will scheduling v at time t effect the schedule for p?</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,207" id="srcline207">207</a></span><span class="line">                        if t &gt;= Time_Frames(p,1) &amp;&amp; t &lt;= Time_Frames(p,2)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,208" id="srcline208">208</a></span><span class="line">                            </span></span>
+<span class="srcline"><span class="lineno"><a href="1,209" id="srcline209">209</a></span><span class="line">                            <span class="comment">% Find all the options for scheduling the parent</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,210" id="srcline210">210</a></span><span class="line">                            time_options = Time_Frames(p,1):Time_Frames(p,2);   <span class="comment">% all times when p can be scheduled</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,211" id="srcline211">211</a></span><span class="line">                            time_options = time_options(time_options ~= t);     <span class="comment">% except the current time t</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,212" id="srcline212">212</a></span><span class="line">                            </span></span>
+<span class="srcline"><span class="lineno"><a href="1,213" id="srcline213">213</a></span><span class="line">                            <span class="comment">%Loop through all these options to add up the force</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,214" id="srcline214">214</a></span><span class="line">                            for o = 1:numel(time_options)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,215" id="srcline215">215</a></span><span class="line">                                <span class="comment">% add the self force of this parent at this t</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,216" id="srcline216">216</a></span><span class="line">                                Predecessor_Force(v, t) = Self_Force(p, time_options(o)) +  Predecessor_Force(v, t); <span class="comment">% +=</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,217" id="srcline217">217</a></span><span class="line">                            end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,218" id="srcline218">218</a></span><span class="line">                            </span></span>
+<span class="srcline"><span class="lineno"><a href="1,219" id="srcline219">219</a></span><span class="line">                        else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,220" id="srcline220">220</a></span><span class="line">                            <span class="comment">% Parent uneffected</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,221" id="srcline221">221</a></span><span class="line">                            Predecessor_Force(v, t) = 0 + Predecessor_Force(v, t);  <span class="comment">% temporary for bookkeeping</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,222" id="srcline222">222</a></span><span class="line">                        end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,223" id="srcline223">223</a></span><span class="line">                    else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,224" id="srcline224">224</a></span><span class="line">                        Predecessor_Force(v, t) = 0 + Predecessor_Force(v, t);  <span class="comment">% temporary for bookkeeping</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,225" id="srcline225">225</a></span><span class="line">                    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,226" id="srcline226">226</a></span><span class="line">                end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,227" id="srcline227">227</a></span><span class="line">                </span></span>
+<span class="srcline"><span class="lineno"><a href="1,228" id="srcline228">228</a></span><span class="line">                for c = 1:numel(operations.children(v,:))  <span class="comment">%Loop through all of this operation's children</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,229" id="srcline229">229</a></span><span class="line">                    if c&lt;inf</span></span>
+<span class="srcline"><span class="lineno"><a href="1,230" id="srcline230">230</a></span><span class="line">                        <span class="comment">% will scheduling v at time t effect the schedule for p?</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,231" id="srcline231">231</a></span><span class="line">                        if t &gt;= Time_Frames(c,1) &amp;&amp; t &lt;= Time_Frames(c,2)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,232" id="srcline232">232</a></span><span class="line">                            </span></span>
+<span class="srcline"><span class="lineno"><a href="1,233" id="srcline233">233</a></span><span class="line">                            <span class="comment">% Find all the options for scheduling the child</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,234" id="srcline234">234</a></span><span class="line">                            time_options = Time_Frames(c,1):Time_Frames(c,2);   <span class="comment">% all times when p can be scheduled</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,235" id="srcline235">235</a></span><span class="line">                            time_options = time_options(time_options ~= t);     <span class="comment">% except the current time t</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,236" id="srcline236">236</a></span><span class="line">                            </span></span>
+<span class="srcline"><span class="lineno"><a href="1,237" id="srcline237">237</a></span><span class="line">                            <span class="comment">%Loop through all these options to add up the force</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,238" id="srcline238">238</a></span><span class="line">                            for o = 1:numel(time_options)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,239" id="srcline239">239</a></span><span class="line">                                <span class="comment">% add the self force of this child at this t</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,240" id="srcline240">240</a></span><span class="line">                                Successor_Force(v, t) = Self_Force(c, time_options(o)) +  Successor_Force(v, t); <span class="comment">% +=</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,241" id="srcline241">241</a></span><span class="line">                            end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,242" id="srcline242">242</a></span><span class="line">                            </span></span>
+<span class="srcline"><span class="lineno"><a href="1,243" id="srcline243">243</a></span><span class="line">                        else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,244" id="srcline244">244</a></span><span class="line">                            <span class="comment">% Parent uneffected</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,245" id="srcline245">245</a></span><span class="line">                            Successor_Force(v, t) = 0 + Successor_Force(v, t);  <span class="comment">% temporary for bookkeeping</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,246" id="srcline246">246</a></span><span class="line">                        end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,247" id="srcline247">247</a></span><span class="line">                    else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,248" id="srcline248">248</a></span><span class="line">                        Successor_Force(v, t) = 0 + Successor_Force(v, t);  <span class="comment">% temporary for bookkeeping</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,249" id="srcline249">249</a></span><span class="line">                    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,250" id="srcline250">250</a></span><span class="line">                end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,251" id="srcline251">251</a></span><span class="line">                </span></span>
+<span class="srcline"><span class="lineno"><a href="1,252" id="srcline252">252</a></span><span class="line">            else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,253" id="srcline253">253</a></span><span class="line">                Predecessor_Force(v, t) = 0;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,254" id="srcline254">254</a></span><span class="line">                Successor_Force(v, t) = 0;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,255" id="srcline255">255</a></span><span class="line">            end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,256" id="srcline256">256</a></span><span class="line">        end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,257" id="srcline257">257</a></span><span class="line">    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,258" id="srcline258">258</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,259" id="srcline259">259</a></span><span class="line">    Total_Force = Self_Force + Predecessor_Force + Successor_Force;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,260" id="srcline260">260</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,261" id="srcline261">261</a></span><span class="line">    <span class="comment">%I would sometimes get really small floating point umbers for Total</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,262" id="srcline262">262</a></span><span class="line">    <span class="comment">%Force, so that would screw up the min force calculation</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,263" id="srcline263">263</a></span><span class="line">    <span class="comment">%Total_Force = round(Total_Force, 5); % this rounds Total_Force to 5 decimal places, may not be nessesary</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,264" id="srcline264">264</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,265" id="srcline265">265</a></span><span class="line">    <span class="comment">%% Schedule the operations with the least force and update its time-frame</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,266" id="srcline266">266</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,267" id="srcline267">267</a></span><span class="line">    [min_force_operation, min_force_cycle] = find(Total_Force == min(min(Total_Force)));    <span class="comment">% need to find alternative to the 'find' function that will work with c++</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,268" id="srcline268">268</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,269" id="srcline269">269</a></span><span class="line">    <span class="comment">% if there are multple min Total Force, just pick the first one found that wasn't already scheduled</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,270" id="srcline270">270</a></span><span class="line">    for o = 1:numel(min_force_operation)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,271" id="srcline271">271</a></span><span class="line">        if ~operations.scheduled(min_force_operation(o))</span></span>
+<span class="srcline"><span class="lineno"><a href="1,272" id="srcline272">272</a></span><span class="line">            min_force_operation =  min_force_operation(o);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,273" id="srcline273">273</a></span><span class="line">            min_force_cycle = min_force_cycle(o);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,274" id="srcline274">274</a></span><span class="line">            break;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,275" id="srcline275">275</a></span><span class="line">        end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,276" id="srcline276">276</a></span><span class="line">    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,277" id="srcline277">277</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,278" id="srcline278">278</a></span><span class="line">    <span class="comment">% add the minimum Force node to the Output Schedule</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,279" id="srcline279">279</a></span><span class="line"><span class="comment">%     OUTPUT_SCHEDULE{min_force_cycle} = [min_force_operation, OUTPUT_SCHEDULE{min_force_cycle}];</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,280" id="srcline280">280</a></span><span class="line">    out_index = 1;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,281" id="srcline281">281</a></span><span class="line">    out_index = find(operations.numbers == min_force_operation);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,282" id="srcline282">282</a></span><span class="line">    OUTPUT_SCHEDULE(out_index) = min_force_cycle;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,283" id="srcline283">283</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,284" id="srcline284">284</a></span><span class="line">    min_force_operation_int = 0;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,285" id="srcline285">285</a></span><span class="line">    min_force_operation_int = min_force_operation(1);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,286" id="srcline286">286</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,287" id="srcline287">287</a></span><span class="line">    min_force_cycle_int = 0;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,288" id="srcline288">288</a></span><span class="line">    min_force_cycle_int = min_force_cycle(1);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,289" id="srcline289">289</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,290" id="srcline290">290</a></span><span class="line">    <span class="comment">% mark it as scheduled</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,291" id="srcline291">291</a></span><span class="line">    operations.scheduled(min_force_operation_int) = true;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,292" id="srcline292">292</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,293" id="srcline293">293</a></span><span class="line">    <span class="comment">% adjust the Time_Frames to lock that node in place</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,294" id="srcline294">294</a></span><span class="line">    Time_Frames(min_force_operation_int,1) = min_force_cycle_int;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,295" id="srcline295">295</a></span><span class="line">    Time_Frames(min_force_operation_int,2) = min_force_cycle_int;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,296" id="srcline296">296</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,297" id="srcline297">297</a></span><span class="line">    <span class="comment">% update the depedant Time_Frames (parents/children)</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,298" id="srcline298">298</a></span><span class="line">    update_parent_Time(min_force_operation_int, min_force_cycle_int, operations, Time_Frames);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,299" id="srcline299">299</a></span><span class="line">    update_child_Time(min_force_operation_int, min_force_cycle_int, operations, Time_Frames);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,300" id="srcline300">300</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,301" id="srcline301">301</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,302" id="srcline302">302</a></span><span class="line">    all_operations_scheduled = all(operations.scheduled);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,303" id="srcline303">303</a></span><span class="line">    </span></span>
+<span class="srcline"><span class="lineno"><a href="1,304" id="srcline304">304</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,305" id="srcline305">305</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,306" id="srcline306">306</a></span><span class="line">end</span></span>
+</pre>
+</div>
+<pre class="code">
+<span class="srcline"><span class="lineno"><a href="1,307" id="srcline307">307</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,308" id="srcline308">308</a></span><span class="line"><span class="comment">%% Other Functions</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,309" id="srcline309">309</a></span><span class="line"><span class="keyword">function</span> <span class="var type1" id="S50T7U1107">parent_count</span> = count_parents(<span class="var type1" id="S51T6U1110">v</span>, <span class="var type1" id="S50T7U1111">parent_count</span>, <span class="var type1" id="S52T2U1112">operations</span>, <span class="var type2" id="S53T9V1U1113">Resource_Latency</span>)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,310" id="srcline310">310</a></span><span class="line"><span class="mxinfo " id="T3:U6"><span class="var type1" id="S54T3U1116">local_family</span> = <span class="mxinfo " id="T3:U8"><span class="mxinfo " id="T4:U9"><span class="var type1" id="S52T2U1119">operations</span>.parents</span>(<span class="var type1" id="S51T6U1121">v</span>,<span class="mxinfo " id="T14:U12">:</span>)</span></span>;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,311" id="srcline311">311</a></span><span class="line"><span class="keyword">if</span> <span class="mxinfo " id="T8:U13"><span class="mxinfo " id="T7:U14">sum(<span class="var type1" id="S54T3U1128">local_family</span>)</span> == <span class="mxinfo " id="T7:U16">0</span></span>   <span class="comment">%only has "in" as parent</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,312" id="srcline312">312</a></span><span class="line">    <span class="keyword">return</span>;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,313" id="srcline313">313</a></span><span class="line"><span class="keyword">else</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,314" id="srcline314">314</a></span><span class="line">    <span class="mxinfo " id="T12:U17"><span class="var type1" id="S56T12U1134">local_parent_count</span> = <span class="mxinfo " id="T12:U19"><span class="mxinfo " id="T12:U20">zeros(<span class="mxinfo " id="T7:U21">numel(<span class="var type1" id="S54T3U1140">local_family</span>)</span>,1)</span> + <span class="var type1" id="S50T7U1142">parent_count</span></span></span>;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,315" id="srcline315">315</a></span><span class="line">    <span class="keyword">for</span> <span class="var type1" id="S59T7U1145">f</span> = <span class="mxinfo " id="T7:U25">1</span>:<span class="mxinfo " id="T7:U26">numel(<span class="var type1" id="S54T3U1150">local_family</span>)</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,316" id="srcline316">316</a></span><span class="line">        <span class="mxinfo " id="T7:U28"><span class="mxinfo " id="T7:U29"><span class="var type1" id="S56T12U1154">local_parent_count</span>(<span class="mxinfo " id="T6:U31"><span class="var type1" id="S54T3U1156">local_family</span>(<span class="var type1" id="S59T7U1157">f</span>)</span>)</span> = <span class="mxinfo " id="T7:U34"><span class="fcn" id="F62N4:B1159">count_parents</span>(<span class="mxinfo " id="T6:U35"><span class="var type1" id="S54T3U1161">local_family</span>(<span class="var type1" id="S59T7U1162">f</span>)</span>, <span class="mxinfo " id="T7:U38"><span class="mxinfo " id="T7:U39"><span class="var type1" id="S56T12U1165">local_parent_count</span>(<span class="mxinfo " id="T6:U41"><span class="var type1" id="S54T3U1167">local_family</span>(<span class="var type1" id="S59T7U1168">f</span>)</span>)</span> + <span class="keyword">...</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,317" id="srcline317">317</a></span><span class="line">            <span class="mxinfo " id="T7:U44"><span class="mxinfo " id="T7:U45">1</span>*<span class="mxinfo " id="T7:U46"><span class="var type1" id="S53T9U1172">Resource_Latency</span>(<span class="mxinfo " id="T6:U48"><span class="mxinfo " id="T3:U49"><span class="var type1" id="S52T2U1175">operations</span>.resource</span>(<span class="var type1" id="S51T6U1177">v</span>)</span>)</span></span></span>,  <span class="var type1" id="S52T2U1178">operations</span>, <span class="var type1" id="S53T9U1179">Resource_Latency</span> )</span></span>;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,318" id="srcline318">318</a></span><span class="line">    <span class="keyword">end</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,319" id="srcline319">319</a></span><span class="line"><span class="keyword">end</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,320" id="srcline320">320</a></span><span class="line"><span class="mxinfo " id="T7:U54"><span class="var type1" id="S50T7U1182">parent_count</span> = <span class="mxinfo " id="T7:U56">max(<span class="var type1" id="S56T12U1185">local_parent_count</span>)</span></span>;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,321" id="srcline321">321</a></span><span class="line"><span class="keyword">end</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,322" id="srcline322">322</a></span><span class="line"></span></span>
+</pre>
+<div class="dead">
+<pre class="code">
+<span class="srcline"><span class="lineno"><a href="1,323" id="srcline323">323</a></span><span class="line">function child_count = count_children(v, child_count, operations, Resource_Latency)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,324" id="srcline324">324</a></span><span class="line">local_family = operations.children(v,:);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,325" id="srcline325">325</a></span><span class="line">if all(local_family == inf)   <span class="comment">%only has "out" as child</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,326" id="srcline326">326</a></span><span class="line">    return;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,327" id="srcline327">327</a></span><span class="line">else</span></span>
+<span class="srcline"><span class="lineno"><a href="1,328" id="srcline328">328</a></span><span class="line">    local_child_count = zeros(numel(local_family),1) + child_count;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,329" id="srcline329">329</a></span><span class="line">    for f = 1:numel(local_family)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,330" id="srcline330">330</a></span><span class="line">        local_child_count(local_family(f)) = count_children(local_family(f), local_child_count(local_family(f)) + ...</span></span>
+<span class="srcline"><span class="lineno"><a href="1,331" id="srcline331">331</a></span><span class="line">            1*Resource_Latency(operations.resource(v)),  operations, Resource_Latency);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,332" id="srcline332">332</a></span><span class="line">    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,333" id="srcline333">333</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,334" id="srcline334">334</a></span><span class="line">child_count = max(local_child_count);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,335" id="srcline335">335</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,336" id="srcline336">336</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,337" id="srcline337">337</a></span><span class="line">function update_parent_Time(v, t, operations, Time_Frames)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,338" id="srcline338">338</a></span><span class="line">local_family = zeros(numel(operations.parents(v,:)),1);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,339" id="srcline339">339</a></span><span class="line">local_family = operations.parents(v,:);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,340" id="srcline340">340</a></span><span class="line">for f = 1:numel(local_family)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,341" id="srcline341">341</a></span><span class="line">    if local_family(f)&gt;0</span></span>
+<span class="srcline"><span class="lineno"><a href="1,342" id="srcline342">342</a></span><span class="line">        <span class="comment">% if this parent was effected by the sceduled operations</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,343" id="srcline343">343</a></span><span class="line">        if t &gt;= Time_Frames(local_family(f),1) &amp;&amp; t &lt;= Time_Frames(local_family(f),2)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,344" id="srcline344">344</a></span><span class="line">            <span class="comment">% then the latest possible time has changed for the parent</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,345" id="srcline345">345</a></span><span class="line">            Time_Frames(local_family(f),2) = Time_Frames(v,1)-1;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,346" id="srcline346">346</a></span><span class="line">            update_parent_Time(local_family(f), Time_Frames(local_family(f),2), operations, Time_Frames);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,347" id="srcline347">347</a></span><span class="line">        end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,348" id="srcline348">348</a></span><span class="line">    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,349" id="srcline349">349</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,350" id="srcline350">350</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,351" id="srcline351">351</a></span><span class="line"></span></span>
+<span class="srcline"><span class="lineno"><a href="1,352" id="srcline352">352</a></span><span class="line">function update_child_Time(v, t, operations, Time_Frames)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,353" id="srcline353">353</a></span><span class="line">local_family = operations.children(v,:);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,354" id="srcline354">354</a></span><span class="line">for f = 1:numel(local_family)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,355" id="srcline355">355</a></span><span class="line">    if local_family(f)&lt;inf</span></span>
+<span class="srcline"><span class="lineno"><a href="1,356" id="srcline356">356</a></span><span class="line">        <span class="comment">% if this child was effected by the sceduled operations</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,357" id="srcline357">357</a></span><span class="line">        if t &gt;= Time_Frames(local_family(f),1) &amp;&amp; t &lt;= Time_Frames(local_family(f),2)</span></span>
+<span class="srcline"><span class="lineno"><a href="1,358" id="srcline358">358</a></span><span class="line">            <span class="comment">% then the latest possible time has changed for the child</span></span></span>
+<span class="srcline"><span class="lineno"><a href="1,359" id="srcline359">359</a></span><span class="line">            Time_Frames(local_family(f),1) = Time_Frames(v,2)+1;</span></span>
+<span class="srcline"><span class="lineno"><a href="1,360" id="srcline360">360</a></span><span class="line">            update_child_Time(local_family(f), Time_Frames(local_family(f),1), operations, Time_Frames);</span></span>
+<span class="srcline"><span class="lineno"><a href="1,361" id="srcline361">361</a></span><span class="line">        end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,362" id="srcline362">362</a></span><span class="line">    end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,363" id="srcline363">363</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,364" id="srcline364">364</a></span><span class="line">end</span></span>
+<span class="srcline"><span class="lineno"><a href="1,365" id="srcline365">365</a></span><span class="line"> </span></span>
+</pre>
+</div>
