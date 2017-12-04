@@ -6,7 +6,7 @@
 #include <fstream>
 #include <map>
 #include <stack>
-#include <boost/regex>
+#include <boost/regex.hpp>
 #include "hlsm.h"
 
 using namespace std;
