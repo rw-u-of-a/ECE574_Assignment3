@@ -36,4 +36,4 @@ file(	GLOB SRCS *.c *.h *.cpp *.hpp)
 add_executable(	hlsyn ${SRCS} main.cpp hlsm.cpp hlsm.h)
 
 # uncomment following line if running on ECE3
-# SET(CMAKE_CXX_FLAGS "-lboost_regex")
+SET(CMAKE_CXX_FLAGS "-lboost_regex")

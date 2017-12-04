@@ -13,7 +13,7 @@ PROJECT(	hlsyn	CXX)
 ADD_SUBDIRECTORY(	src	)
 
 # uncomment following line if running on ECE3
-# SET(CMAKE_CXX_FLAGS "-lboost_regex -std=c++11")
+SET(CMAKE_CXX_FLAGS "-lboost_regex -std=c++11")
 
 # comment following line if running on ECE3
 SET(CMAKE_CXX_FLAGS "-std=c++11")

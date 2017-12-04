@@ -2,8 +2,9 @@
 // Created by Joe Loubert on 11/22/2017.
 //
 
-#ifndef DPGEN_HLSM_H
-#define DPGEN_HLSM_H
+#ifndef HLSYN_HLSM_H
+#define HLSYN_HLSM_H
+#define MAX_LAT 100
 
 #include <iostream>
 #include <vector>
@@ -24,7 +25,11 @@ struct component {
     int start_cyc;
     int end_cyc;
     int num_cyc;
+    double FDS_prob[MAX_LAT];
     bool is_scheduled;
+    bool FDS_scheduled;
+    int ASAP_lat;
+    int ALAP_lat;
     component(int i, int s, string t) :
             id(i),
             state(s),
@@ -73,14 +78,25 @@ struct statedef {
     int start_cyc;
     int last_cyc;
     int num_cyc;
-    int ASAP_lat;
+    int min_lat;
+    int min_succ_lat;        // Minimum latency to schedule state and successors
+    double DGADD[MAX_LAT];
+    double DGMUL[MAX_LAT];
+    double DGLOG[MAX_LAT];
+    double DGDIV[MAX_LAT];  // Too lazy to figure out the right way to do this
+    bool msl_sched;
+    bool is_sched;
     map<int,vector<int>> cycmap;
     branch sbranch;
     statedef(int s) :
             state(s),
             start_cyc(0),
             last_cyc(0),
-            num_cyc(0)
+            num_cyc(0),
+            min_lat(0),
+            min_succ_lat(0),
+            msl_sched(false),
+            is_sched(false)
     {}
 };
 
@@ -93,7 +109,6 @@ public:
     cmap components;
     wmap wires;
     smap states;
-    int num_scheduled;
     int num_components;
     int inop(int);
     int add_state(int);
@@ -103,11 +118,21 @@ public:
     int add_branch(const string&, int, int, int);
     int wire_to_component(const string&, int);
     int wire_from_component(const string&, int);
-    int clear(int);
+    int unsched(int);
     int ASAP_me(int);
     int ASAP(int);
+    int min_succ_lat(int);
     int ALAP_me(int, int);
     int ALAP(int, int);
+    int ALAP_succ(int, int);
+    int unsched_all();
+    int FDS_setup(int);
+    int FDS(int);
+    double total_force(int, int);
+    double pred_force(int, int);
+    double succ_force(int, int);
+    int pred_ALAP(int);
+    int succ_ASAP(int);
 };
 
-#endif //DPGEN_HLSM_H
+#endif //HLSYN_HLSM_H

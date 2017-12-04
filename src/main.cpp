@@ -6,11 +6,11 @@
 #include <fstream>
 #include <map>
 #include <stack>
-#include <regex>
+#include <boost/regex>
 #include "hlsm.h"
 
 using namespace std;
-//using namespace boost;
+using namespace boost;
 
 int main(int argc, char ** argv) {
     string temp, temp2, temp3;
@@ -22,7 +22,10 @@ int main(int argc, char ** argv) {
     int latency = stoi(argv[2]);
     string verilogFile = string(argv[3]);
     string line;
-
+    if (latency > MAX_LAT) {
+        cout << "Latency > "<<MAX_LAT<<" not allowed. Edit MAX_LAT in hlsm.h to increase limit."<<endl;
+        return -1;
+    }
     hlsm G;
 
     string name, oline;
@@ -240,10 +243,10 @@ int main(int argc, char ** argv) {
                 cur_readstate = READ;
             }
 
-            G.add_component(id, cur_state, "");           // We have to create an operation for the if statement
+            G.add_component(id, cur_state, "");             // We have to create an operation for the if statement
             G.wire_to_component(result[1], id);             // To ensure that its condition has been calculated
             G.components[id]->num_cyc = 1;                  // By the time the 'if' statement shows up
-            G.components[id]->op = LOG;                     // For scheduling purposes, let's make it a logic.
+            G.components[id]->op = IF1;                     // For scheduling purposes, let's give it its own type.
             id++;
 
             G.states[cur_state]->sbranch.cond = result[1];
@@ -312,16 +315,21 @@ int main(int argc, char ** argv) {
     for (s = 0; s < G.states.size(); s++) {
         G.ASAP(s);
     }
-//        if (s == 1) {
-//            if (G.ALAP(s, latency)) {
-//                cout << "Latency too short" << endl;
-//                return -1;
-//            }
-//            G.ASAP(s);
-//        } else {
-//            G.ASAP(s);
-//        }
+    G.min_succ_lat(1);              // Calculate the minimum latency needed for each state
+    G.unsched_all();                // Unschedule all the states
+    G.ASAP(cur_state);              // We shouldn't unschedule the Done state though
+    if (G.ALAP_succ(1, latency) < 0) {
+        cout << "Latency too short" << endl;
+        return -1;
+    }
+    G.unsched_all();                // Unschedule all the states
+    G.ASAP(cur_state);              // We shouldn't unschedule the Done state though
+    for (s = 1; s < G.states.size()-1; s++) {     // Skip states Wait and Done
+        G.FDS(s);
+    }
 
+    // Calculate total number of states
+    // And convert all '-1' states to correct Done state
     int j = 0;
     for (s = 0; s < G.states.size(); s++) {
         G.states[s]->start_cyc = j;
@@ -398,7 +406,7 @@ int main(int argc, char ** argv) {
 
     if(outfile.is_open()) {
         for (vector<string>::iterator itr = olines.begin(); itr != olines.end(); ++itr) {
-            cout << *itr;
+            outfile << *itr;
         }
     }
     else {
